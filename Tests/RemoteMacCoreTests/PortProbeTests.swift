@@ -68,3 +68,35 @@ import Testing
         host: "127.0.0.1", port: boundPort, timeout: .seconds(3))
     #expect(outcome == .listening)
 }
+
+// MARK: - classify()
+//
+// Unit-tested directly against NWError values rather than through the
+// network: `.refused` must be reserved for the one error that actually
+// proves a closed port. Every other error must fall back to `.timedOut`
+// ("Offline"), not `.refused` ("Screen Sharing wyłączony") — an unrecognized
+// error means we failed to reach the host, not that we learned its Screen
+// Sharing is off.
+
+@Test func connectionRefusedIsRefused() {
+    #expect(classify(.posix(.ECONNREFUSED)) == .refused)
+}
+
+@Test func hostUnreachableIsTimedOutNotRefused() {
+    #expect(classify(.posix(.EHOSTUNREACH)) == .timedOut)
+}
+
+@Test func networkDownIsTimedOutNotRefused() {
+    #expect(classify(.posix(.ENETDOWN)) == .timedOut)
+}
+
+@Test func dnsNoSuchRecordIsDNSFailure() {
+    #expect(classify(.dns(Int32(kDNSServiceErr_NoSuchRecord))) == .dnsFailure)
+}
+
+@Test func dnsTimeoutIsTimedOutNotDNSFailureNotRefused() {
+    let outcome = classify(.dns(Int32(kDNSServiceErr_Timeout)))
+    #expect(outcome == .timedOut)
+    #expect(outcome != .dnsFailure)
+    #expect(outcome != .refused)
+}
