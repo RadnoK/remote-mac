@@ -1,3 +1,4 @@
+import AppKit
 import RemoteMacCore
 import SwiftUI
 
@@ -48,9 +49,12 @@ struct MenuView: View {
 
             Divider().padding(.vertical, 4)
 
-            Button("Szybkie połączenie…") { openWindow(id: "quick-switcher") }
-                .buttonStyle(.borderless)
-                .padding(.horizontal, 10)
+            Button("Szybkie połączenie…") {
+                NSApp.activate()
+                openWindow(id: "quick-switcher")
+            }
+            .buttonStyle(.borderless)
+            .padding(.horizontal, 10)
 
             Button("Odśwież") {
                 Task { await store.refresh() }
@@ -58,9 +62,12 @@ struct MenuView: View {
             .buttonStyle(.borderless)
             .padding(.horizontal, 10)
 
-            Button("Ustawienia…") { openSettings() }
-                .buttonStyle(.borderless)
-                .padding(.horizontal, 10)
+            Button("Ustawienia…") {
+                NSApp.activate()
+                openSettings()
+            }
+            .buttonStyle(.borderless)
+            .padding(.horizontal, 10)
 
             Button("Zakończ") { NSApplication.shared.terminate(nil) }
                 .buttonStyle(.borderless)

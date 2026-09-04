@@ -110,6 +110,16 @@ public final class HostStore {
         refreshGeneration += 1
         let generation = refreshGeneration
 
+        // Snapshot the previous entries' details before building `newEntries`
+        // so enrichment that fails this tick — for one host or all of
+        // them — leaves last-known details in place instead of visibly
+        // blanking the subtitle out and back in on every poll.
+        let previousDetails = Dictionary(
+            uniqueKeysWithValues: entries.compactMap { entry in
+                entry.details.map { (entry.host.id, $0) }
+            }
+        )
+
         var discovered: [Host] = []
         var newTailscaleError: String?
         do {
@@ -142,7 +152,8 @@ public final class HostStore {
                 status: resolveStatus(
                     tailscaleOnline: host.source == .tailscale ? host.isOnline : nil,
                     probe: statuses[host.id]
-                )
+                ),
+                details: previousDetails[host.id]
             )
         }
 
@@ -173,9 +184,8 @@ public final class HostStore {
         // before touching `entries` again — otherwise a stale enrichment
         // pass could overwrite a newer refresh's freshly committed entries.
         guard generation == refreshGeneration else { return }
-        guard !details.isEmpty else { return }
         entries = entries.map { entry in
-            HostEntry(host: entry.host, status: entry.status, details: details[entry.host.id])
+            HostEntry(host: entry.host, status: entry.status, details: details[entry.host.id] ?? entry.details)
         }
     }
 
@@ -255,7 +265,7 @@ public final class HostStore {
     private func message(for error: Error) -> String {
         switch error {
         case CommandError.notFound:
-            "Nie znaleziono Tailscale."
+            "Nie znaleziono Tailscale. Zainstaluj Tailscale i upewnij się, że jest uruchomiony."
         case CommandError.timedOut:
             "Tailscale nie odpowiada."
         case TailscaleParseError.guiLaunchFailure:

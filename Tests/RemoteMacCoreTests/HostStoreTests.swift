@@ -505,6 +505,79 @@ private actor FirstCallGatedSSHRunner: CommandRunning {
     #expect(store.entries.first?.details?.consoleUser == "fresh-user")
 }
 
+/// Fakes the SSH runner so a test can make enrichment succeed for a host on
+/// the first `refresh()` and fail on the second, independently per host. The
+/// SSH arguments always include `"user@<ipv4>"` as the last-but-one element
+/// (see `SSHStatusClient.fetchDetails`), so matching on that substring tells
+/// which host a given call is for; a per-host call counter then decides
+/// whether that call is the "first" (succeeds) or "second" (fails, by
+/// returning empty data so `fetchDetails` yields nil) attempt for it.
+private actor PerHostSSHRunner: CommandRunning {
+    private var callCounts: [String: Int] = [:]
+    /// Host IPv4 substrings that should fail (return nil details) starting
+    /// on their 2nd call.
+    private let failFromSecondCall: Set<String>
+
+    init(failFromSecondCall: Set<String>) {
+        self.failFromSecondCall = failFromSecondCall
+    }
+
+    func run(executable: String, arguments: [String],
+             environment: [String: String], timeout: Duration) async throws -> Data {
+        guard let destination = arguments.first(where: { $0.contains("@") }),
+              let ip = destination.split(separator: "@").last.map(String.init)
+        else {
+            return Data()
+        }
+        callCounts[ip, default: 0] += 1
+        let isSecondOrLaterCall = callCounts[ip]! >= 2
+        if failFromSecondCall.contains(ip), isSecondOrLaterCall {
+            return Data()
+        }
+        return Data("radnok-\(ip)\nNo\n".utf8)
+    }
+}
+
+/// Pins Fix 2 from the final review: a partial enrichment failure (one host's
+/// SSH round-trip fails while another's succeeds) must not drop the failing
+/// host's previously known details. Before the fix, the final enrichment
+/// assignment unconditionally set `details: details[entry.host.id]`, so any
+/// host missing from that tick's `details` dictionary — whether the whole
+/// pass failed or just that one host — was reset to nil, even though it had
+/// good details from the previous refresh a moment ago.
+@MainActor
+@Test func partialEnrichmentFailurePreservesThatHostsPreviousDetails() async throws {
+    let sshRunner = PerHostSSHRunner(failFromSecondCall: ["100.108.216.101"]) // mbp fails on 2nd refresh
+    let store = makeStore(
+        runner: StubRunner(json: twoMacsJSON),
+        probe: StubProbe(outcomes: [
+            "100.123.34.96": .listening,
+            "100.108.216.101": .listening,
+        ]),
+        sshStatus: SSHStatusClient(runner: sshRunner)
+    )
+
+    await store.refresh()
+    let mini = store.entries.first { $0.host.name == "mini" }
+    let mbp = store.entries.first { $0.host.name == "mbp" }
+    #expect(mini?.details?.consoleUser == "radnok-100.123.34.96")
+    let mbpDetailsAfterFirstRefresh = mbp?.details
+    #expect(mbpDetailsAfterFirstRefresh?.consoleUser == "radnok-100.108.216.101")
+
+    // Second refresh: mbp's SSH call now fails (returns nil details), mini's
+    // still succeeds.
+    await store.refresh()
+    let miniAfterSecondRefresh = store.entries.first { $0.host.name == "mini" }
+    let mbpAfterSecondRefresh = store.entries.first { $0.host.name == "mbp" }
+
+    // mini's details refresh normally.
+    #expect(miniAfterSecondRefresh?.details?.consoleUser == "radnok-100.123.34.96")
+    // mbp's enrichment failed this tick, but its details from the first
+    // refresh must still be present, not nil.
+    #expect(mbpAfterSecondRefresh?.details == mbpDetailsAfterFirstRefresh)
+    #expect(mbpAfterSecondRefresh?.details != nil)
+}
+
 private let subtitleHost = Host(id: "1", name: "mini", displayName: "Mac mini",
                                 ipv4: "100.123.34.96", isOnline: true,
                                 source: .tailscale, sshUsername: "radnok")
