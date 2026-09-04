@@ -33,7 +33,14 @@ public enum LoginItem {
         case .enabled:          return .enabled
         case .notRegistered:    return .disabled
         case .requiresApproval: return .requiresApproval
-        case .notFound:         return .unavailable
+        // `.notFound` means the system has no record of this service yet —
+        // the ordinary state for an app that has never registered one. It is
+        // NOT evidence that the bundle is unsigned, and reporting it as
+        // "unavailable (app is not signed)" was simply false for this signed
+        // build: it greyed out a toggle that works. Treat it as "off"; a real
+        // signing problem surfaces as a thrown `kSMErrorInvalidSignature`
+        // from `register()`, which the settings pane already reports.
+        case .notFound:         return .disabled
         @unknown default:       return .unavailable
         }
     }

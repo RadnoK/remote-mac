@@ -6,6 +6,12 @@ struct HostRow: View {
     let store: HostStore
     @State private var isHovered = false
 
+    /// Fixed-width slot for the hover-revealed SSH button. Reserving the
+    /// space even while hidden keeps the trailing edge of every row aligned
+    /// instead of the text reflowing sideways as the button pops in and out
+    /// — the same ragged-edge fix RouterMenu applies to its row glyphs.
+    private static let trailingActionWidth: CGFloat = 20
+
     var body: some View {
         HStack(spacing: 8) {
             StatusDot(status: entry.status, l10n: store.l10n)
@@ -21,21 +27,22 @@ struct HostRow: View {
 
             Spacer(minLength: 8)
 
-            if isHovered {
-                Button {
-                    store.openSSH(to: entry.host)
-                } label: {
-                    Image(systemName: "terminal")
-                }
-                .buttonStyle(.borderless)
-                .help(store.l10n(.rowOpenSSH))
+            Button {
+                store.openSSH(to: entry.host)
+            } label: {
+                Image(systemName: "terminal")
             }
+            .buttonStyle(.borderless)
+            .help(store.l10n(.rowOpenSSH))
+            .opacity(isHovered ? 1 : 0)
+            .frame(width: Self.trailingActionWidth)
+            .allowsHitTesting(isHovered)
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, 8)
         .padding(.vertical, 5)
         .contentShape(Rectangle())
-        .background(isHovered ? Color.secondary.opacity(0.15) : .clear)
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .background(isHovered ? Color.secondary.opacity(0.15) : .clear,
+                    in: RoundedRectangle(cornerRadius: 6, style: .continuous))
         .onHover { isHovered = $0 }
         .onTapGesture { store.connect(to: entry.host) }
         .contextMenu {

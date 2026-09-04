@@ -74,7 +74,7 @@ import Testing
 // Unit-tested directly against NWError values rather than through the
 // network: `.refused` must be reserved for the one error that actually
 // proves a closed port. Every other error must fall back to `.timedOut`
-// ("Offline"), not `.refused` ("Screen Sharing wyłączony") — an unrecognized
+// ("Offline"), not `.refused` ("Sharing off") — an unrecognized
 // error means we failed to reach the host, not that we learned its Screen
 // Sharing is off.
 

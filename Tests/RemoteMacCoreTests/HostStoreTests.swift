@@ -163,6 +163,54 @@ private func makeStore(
 }
 
 @MainActor
+@Test func isLoadingStartsTrueAndClearsAfterFirstRefresh() async {
+    let store = makeStore(
+        runner: StubRunner(json: twoMacsJSON),
+        probe: StubProbe(outcomes: ["100.123.34.96": .listening])
+    )
+    #expect(store.isLoading)
+
+    await store.refresh()
+
+    #expect(!store.isLoading)
+}
+
+@MainActor
+@Test func isLoadingStaysFalseOnceRealDataHasLanded() async {
+    // A later refresh that happens to find nothing (e.g. every host removed)
+    // is a legitimate empty state, not "still loading" — the loading signal
+    // must not flip back on.
+    let store = makeStore(
+        runner: StubRunner(json: twoMacsJSON),
+        probe: StubProbe(outcomes: ["100.123.34.96": .listening])
+    )
+    await store.refresh()
+    #expect(!store.isLoading)
+
+    store.settings.hiddenHostIDs = store.entries.map(\.id)
+    await store.refresh()
+
+    #expect(!store.isLoading)
+}
+
+@MainActor
+@Test func isLoadingStaysTrueWhileFirstRefreshIsInFlight() async {
+    let gate = FirstCallGatedProbe()
+    let store = makeStore(runner: StubRunner(json: oneMacJSON), probe: gate)
+
+    let refreshTask = Task { await store.refresh() }
+    // Give the refresh a moment to start and reach the gated probe call —
+    // it must still read as loading while genuinely in flight.
+    try? await Task.sleep(for: .milliseconds(50))
+    #expect(store.isLoading)
+
+    await gate.release()
+    await refreshTask.value
+
+    #expect(!store.isLoading)
+}
+
+@MainActor
 @Test func tailscaleFailureSurfacesMessageAndKeepsManualHosts() async {
     let store = makeStore(
         runner: FailingRunner(error: .timedOut),
@@ -588,7 +636,7 @@ private func makeTestL10n() throws -> L10n {
 }
 
 /// Enrichment only ever runs for `.online` hosts, whose status label is
-/// always the longest one ("Screen Sharing listening" — ~25 characters on
+/// always the longest one ("Available") on
 /// its own). With `.lineLimit(1)` in a ~280pt-wide menu row, keeping that
 /// label once `details` are known would push the lock indicator — the whole
 /// point of enrichment — off the visible line. `hostSubtitle` drops the
@@ -597,7 +645,7 @@ private func makeTestL10n() throws -> L10n {
 @MainActor
 @Test func subtitleShowsIPAndStatusWhenNoDetails() throws {
     let entry = HostEntry(host: subtitleHost, status: .online)
-    #expect(hostSubtitle(for: entry, l10n: try makeTestL10n()) == "100.123.34.96 · Screen Sharing listening")
+    #expect(hostSubtitle(for: entry, l10n: try makeTestL10n()) == "100.123.34.96 · Available")
 }
 
 @MainActor
@@ -637,7 +685,7 @@ private func makeTestL10n() throws -> L10n {
     #expect(hostSubtitle(for: offline, l10n: l10n) == "100.123.34.96 · Offline")
 
     let sharingOff = HostEntry(host: subtitleHost, status: .screenSharingOff, details: stale)
-    #expect(hostSubtitle(for: sharingOff, l10n: l10n) == "100.123.34.96 · Screen Sharing off")
+    #expect(hostSubtitle(for: sharingOff, l10n: l10n) == "100.123.34.96 · Sharing off")
 
     let unknown = HostEntry(host: subtitleHost, status: .unknown, details: stale)
     #expect(hostSubtitle(for: unknown, l10n: l10n) == "100.123.34.96 · Unknown")

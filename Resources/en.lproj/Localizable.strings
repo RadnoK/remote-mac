@@ -1,8 +1,16 @@
 /* Menu — window titles */
 "menu.quick_switcher_title" = "Quick Connect";
 
+/* Menu — header */
+"menu.header.title" = "RemoteMac";
+"menu.header.summary" = "%d machines · %d available";
+
 /* Menu — states */
 "menu.no_hosts" = "No machines";
+"menu.loading" = "Loading machines…";
+
+/* Menu — pane */
+"menu.section.machines" = "Machines";
 
 /* Menu — actions */
 "menu.quick_connect" = "Quick Connect…";
@@ -22,9 +30,9 @@
 /* Status labels */
 "status.unknown" = "Unknown";
 "status.offline" = "Offline";
-"status.online" = "Screen Sharing listening";
-"status.screen_sharing_off" = "Screen Sharing off";
-"status.not_found" = "Host not found";
+"status.online" = "Available";
+"status.screen_sharing_off" = "Sharing off";
+"status.not_found" = "Not found";
 
 /* Login item state labels */
 "login_item.enabled" = "Enabled";
@@ -35,21 +43,41 @@
 /* Settings — tabs */
 "settings.tab.general" = "General";
 "settings.tab.hosts" = "Machines";
+"settings.tab.about" = "About";
 
 /* Settings — general */
+"settings.general.section" = "Terminal";
 "settings.general.terminal_field" = "Terminal:";
 "settings.general.ssh_username_field" = "SSH user:";
 "settings.general.launch_at_login" = "Launch at login";
+"settings.general.launch_at_login_help" = "Starts RemoteMac automatically when you log in.";
 "settings.general.open_system_settings" = "Open System Settings";
 "settings.general.warp_clipboard_hint" = "Warp cannot run a command automatically. The command is copied to the clipboard — paste it with ⌘V.";
 "settings.general.terminal_automation_hint" = "Terminal requires automation permission. macOS will ask for it the first time it is used.";
 "settings.general.launch_at_login_error" = "Could not change the launch-at-login setting. This feature requires a signed build of the app — if you are using a development build or revoked the permission in System Settings, the toggle will not work.";
+"settings.appearance.section" = "Appearance";
+"settings.appearance.language" = "Language";
+"settings.appearance.language_system" = "System";
+"settings.appearance.language_polish" = "Polish";
+"settings.appearance.language_english" = "English";
 
 /* Settings — hosts */
 "settings.hosts.manual_header" = "Manually added machines";
 "settings.hosts.name_field" = "Name";
 "settings.hosts.address_field" = "IP address";
-"settings.hosts.add" = "Add";
+"settings.hosts.add" = "Add machine";
+"settings.hosts.remove" = "Remove machine";
+"settings.hosts.remove_confirm" = "Remove this machine?";
+"settings.hosts.empty" = "No manually added machines yet.";
+"settings.hosts.list_section" = "Manually added";
+"settings.hosts.detail_section" = "Machine";
+
+/* Settings — about */
+"settings.about.section" = "About";
+"settings.about.version" = "Version";
+"settings.about.website" = "Website";
+"settings.about.contact" = "Contact";
+"settings.about.send_email" = "Send Email";
 
 /* Errors */
 "error.host_list_failed" = "Could not read the list of machines.";

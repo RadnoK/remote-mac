@@ -3,6 +3,7 @@ import SwiftUI
 
 @main
 struct RemoteMacApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var store = HostStore()
 
     var body: some Scene {
@@ -27,7 +28,13 @@ struct RemoteMacApp: App {
             SettingsView(store: store)
         }
 
-        Window(store.l10n(.menuQuickSwitcherTitle), id: "quick-switcher") {
+        // The title is a literal, not `store.l10n(...)`: reading observable
+        // state while building the scene graph makes the graph itself depend
+        // on that state, and SwiftUI then rebuilds the scenes on every store
+        // change. That left the `Settings` scene unopenable — its menu item
+        // existed and fired, but no window appeared. Scene structure has to
+        // stay static; the window's own content is localized normally.
+        Window("Quick Connect", id: "quick-switcher") {
             QuickSwitcher(store: store)
         }
         .windowResizability(.contentSize)

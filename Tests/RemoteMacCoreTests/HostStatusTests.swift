@@ -53,9 +53,17 @@ import Testing
         let l10n = L10n(language: language, bundles: [bundle])
         #expect(all.allSatisfy { !$0.label(l10n).isEmpty })
     }
-    // Open port proves the service listens, not that login will succeed.
-    let en = L10n(language: .en, bundles: [bundle])
-    #expect(HostStatus.online.label(en).contains("listening"))
-    let pl = L10n(language: .pl, bundles: [bundle])
-    #expect(HostStatus.online.label(pl).contains("nasłuchuje"))
+    // An open port proves the service answers, not that login will succeed.
+    // The label must not overclaim: "Available" is honest, "Connected" or
+    // "Ready to connect" would not be. These labels are also rendered in a
+    // narrow menu row, so they must stay short enough not to truncate.
+    for language: AppLanguage in [.en, .pl] {
+        let l10n = L10n(language: language, bundles: [bundle])
+        let label = HostStatus.online.label(l10n)
+        #expect(label.count <= 16, "status label too long for the row: \(label)")
+        for overclaim in ["connect", "połącz", "ready", "gotow"] {
+            #expect(!label.lowercased().contains(overclaim),
+                    "status label overclaims reachability: \(label)")
+        }
+    }
 }

@@ -25,5 +25,10 @@ let package = Package(
             dependencies: ["RemoteMacCore"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
+        .testTarget(
+            name: "RemoteMacTests",
+            dependencies: ["RemoteMac"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
     ]
 )

@@ -17,7 +17,7 @@ public struct HostEntry: Sendable, Identifiable, Equatable {
 /// Builds the single-line subtitle shown under a host's display name.
 ///
 /// Enrichment only ever runs for `.online` hosts, so once `details` are
-/// present the status label is always "Screen Sharing listening" — the
+/// present the status label is always "Available" — it
 /// longest label, and one that carries no new information at that point
 /// (the status dot already shows it). With a 1-line limit in a narrow menu
 /// row, keeping it would push out the lock indicator, which is the entire
@@ -44,6 +44,14 @@ public func hostSubtitle(for entry: HostEntry, l10n: L10n) -> String {
 @Observable
 public final class HostStore {
     public private(set) var entries: [HostEntry] = []
+    /// True until the first `refresh()` call has committed its results.
+    /// `entries` is empty both before any host has ever been discovered and
+    /// for the ~50ms a fresh probe pass takes on every launch — without this
+    /// signal a view cannot tell those two states apart, and would show
+    /// "No machines" on a perfectly normal cold start. Only the first
+    /// refresh matters: once real data has landed, an empty `entries` (e.g.
+    /// every host removed) is a legitimate empty state again, not loading.
+    public private(set) var isLoading = true
     public private(set) var tailscaleError: String?
     /// User-facing message for a launch (SSH/terminal) that could not be
     /// carried out — e.g. a denied AppleEvents/Automation TCC grant for
@@ -176,6 +184,7 @@ public final class HostStore {
         guard generation == refreshGeneration else { return }
         tailscaleError = newTailscaleError
         entries = newEntries
+        isLoading = false
 
         // Enrichment runs after the list is already visible, so a slow or
         // unavailable SSH path never delays the menu.

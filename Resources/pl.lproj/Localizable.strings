@@ -1,8 +1,16 @@
 /* Menu — tytuły okien */
 "menu.quick_switcher_title" = "Szybkie połączenie";
 
+/* Menu — nagłówek */
+"menu.header.title" = "RemoteMac";
+"menu.header.summary" = "%d maszyn · %d dostępnych";
+
 /* Menu — stany */
 "menu.no_hosts" = "Brak maszyn";
+"menu.loading" = "Wczytywanie maszyn…";
+
+/* Menu — sekcja */
+"menu.section.machines" = "Maszyny";
 
 /* Menu — akcje */
 "menu.quick_connect" = "Szybkie połączenie…";
@@ -22,9 +30,9 @@
 /* Etykiety statusu */
 "status.unknown" = "Nieznany";
 "status.offline" = "Offline";
-"status.online" = "Screen Sharing nasłuchuje";
-"status.screen_sharing_off" = "Screen Sharing wyłączony";
-"status.not_found" = "Nie znaleziono hosta";
+"status.online" = "Dostępny";
+"status.screen_sharing_off" = "Udostępnianie wyłączone";
+"status.not_found" = "Nie znaleziono";
 
 /* Etykiety stanu elementu logowania */
 "login_item.enabled" = "Włączone";
@@ -35,21 +43,41 @@
 /* Ustawienia — zakładki */
 "settings.tab.general" = "Ogólne";
 "settings.tab.hosts" = "Maszyny";
+"settings.tab.about" = "O aplikacji";
 
 /* Ustawienia — ogólne */
+"settings.general.section" = "Terminal";
 "settings.general.terminal_field" = "Terminal:";
 "settings.general.ssh_username_field" = "Użytkownik SSH:";
 "settings.general.launch_at_login" = "Uruchamiaj przy logowaniu";
+"settings.general.launch_at_login_help" = "Uruchamia RemoteMac automatycznie po zalogowaniu.";
 "settings.general.open_system_settings" = "Otwórz Ustawienia systemowe";
 "settings.general.warp_clipboard_hint" = "Warp nie pozwala uruchomić komendy automatycznie. Komenda trafi do schowka — wklej ją przez ⌘V.";
 "settings.general.terminal_automation_hint" = "Terminal wymaga zgody na automatyzację. macOS zapyta o nią przy pierwszym użyciu.";
 "settings.general.launch_at_login_error" = "Nie udało się zmienić ustawienia uruchamiania przy logowaniu. Ta funkcja wymaga podpisanej wersji aplikacji — jeśli używasz wersji deweloperskiej lub cofnięto zgodę w Ustawieniach systemowych, przełącznik nie zadziała.";
+"settings.appearance.section" = "Wygląd";
+"settings.appearance.language" = "Język";
+"settings.appearance.language_system" = "Systemowy";
+"settings.appearance.language_polish" = "Polski";
+"settings.appearance.language_english" = "Angielski";
 
 /* Ustawienia — maszyny */
 "settings.hosts.manual_header" = "Ręcznie dodane maszyny";
 "settings.hosts.name_field" = "Nazwa";
 "settings.hosts.address_field" = "Adres IP";
-"settings.hosts.add" = "Dodaj";
+"settings.hosts.add" = "Dodaj maszynę";
+"settings.hosts.remove" = "Usuń maszynę";
+"settings.hosts.remove_confirm" = "Usunąć tę maszynę?";
+"settings.hosts.empty" = "Brak ręcznie dodanych maszyn.";
+"settings.hosts.list_section" = "Ręcznie dodane";
+"settings.hosts.detail_section" = "Maszyna";
+
+/* Ustawienia — o aplikacji */
+"settings.about.section" = "O aplikacji";
+"settings.about.version" = "Wersja";
+"settings.about.website" = "Strona internetowa";
+"settings.about.contact" = "Kontakt";
+"settings.about.send_email" = "Wyślij e-mail";
 
 /* Błędy */
 "error.host_list_failed" = "Nie udało się odczytać listy maszyn.";
