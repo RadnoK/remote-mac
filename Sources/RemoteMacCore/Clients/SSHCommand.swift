@@ -51,10 +51,16 @@ public func launchPlan(
         )
 
     case .terminal:
+        // The do script argument is a shell command line. First shell-escape it
+        // (wrapping in single quotes protects against newlines and all shell
+        // metacharacters), then AppleScript-escape the result (protecting quotes
+        // and backslashes for the AppleScript string literal).
+        let shellSafe = shellEscape(sshCommandLine(user: user, host: host))
+        let scriptSafe = appleScriptEscape(shellSafe)
         let script = """
         tell application "Terminal"
             activate
-            do script "\(appleScriptEscape(sshCommandLine(user: user, host: host)))"
+            do script "\(scriptSafe)"
         end tell
         """
         return .appleScript(source: script, bundleID: terminal.bundleIdentifier)
@@ -72,10 +78,12 @@ private func shellEscape(_ value: String) -> String {
     "'" + value.replacingOccurrences(of: "'", with: #"'\''"#) + "'"
 }
 
-/// Escapes backslashes and double quotes for embedding in an AppleScript
-/// string literal.
+/// Escapes backslashes, double quotes, and newlines for embedding in an
+/// AppleScript string literal. Newlines cannot appear raw in an AppleScript
+/// string literal; they must be escaped as backslash-n.
 private func appleScriptEscape(_ value: String) -> String {
     value
         .replacingOccurrences(of: "\\", with: "\\\\")
+        .replacingOccurrences(of: "\n", with: "\\n")
         .replacingOccurrences(of: "\"", with: "\\\"")
 }

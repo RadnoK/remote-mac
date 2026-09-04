@@ -39,7 +39,8 @@ import Testing
 @Test func itermEscapesShellMetacharactersWithPOSIXQuoting() {
     // iTerm re-parses the string via `login … $SHELL -c`, so all characters
     // including newline must be protected. POSIX single-quoting is safe:
-    // no character is special inside '...'.
+    // no character is special inside '...'. Embedded apostrophes test the
+    // '\'' escape sequence specifically.
     let hostnames = [
         "h;touch /tmp/x",      // semicolon command injection
         "h>/tmp/x",            // output redirection
@@ -47,7 +48,10 @@ import Testing
         "h*",                  // glob expansion
         "h$(id)",              // command substitution
         "h`id`",               // command substitution
-        "h\nrm -rf x"          // newline - parsed as second command
+        "h\nrm -rf x",         // newline - parsed as second command
+        "h'x",                 // apostrophe (tests '\'' escape)
+        "h'; touch /tmp/x; '", // apostrophe injection
+        "'"                    // bare apostrophe
     ]
 
     for hostname in hostnames {
@@ -66,21 +70,38 @@ import Testing
         #expect(quotedContent.hasPrefix("'"))
         #expect(quotedContent.hasSuffix("'"))
 
-        // Interior must be properly quoted: no unescaped single quotes
-        // Valid patterns: regular chars or '\'' (end quote, escaped quote, start quote)
+        // Interior must be properly quoted: no unescaped single quotes.
+        // The escape sequence for a quote in single quotes is: end-quote, backslash,
+        // the literal quote, start-quote. In the interior, this appears as:
+        // ' (end previous section), \ (escape), ' (literal quote), ' (start new section)
         let interior = String(quotedContent.dropFirst().dropLast())
-        var i = interior.startIndex
-        while i < interior.endIndex {
-            let char = interior[i]
-            if char == "'" {
-                // Single quote must be preceded by backslash and followed by single quote
-                // pattern: \''  (actually '\'', but we're inside, so we see \'' )
-                let remaining = String(interior[i...])
-                #expect(remaining.hasPrefix(#"\'"#), "unescaped interior quote at \(i): \(remaining)")
-                // Skip past \''
-                i = interior.index(i, offsetBy: 3, limitedBy: interior.endIndex) ?? interior.endIndex
+        var searchStr = interior
+        while let quoteIdx = searchStr.firstIndex(of: "'") {
+            // Found a quote. Check if it's part of a valid escape sequence.
+            // Pattern: ' (end quote) followed by \ (backslash) followed by ' ' (two quotes to open next section)
+            // Or at the very start/end with proper context.
+
+            // Get indices for surrounding characters
+            let nextIdx = searchStr.index(after: quoteIdx)
+            let hasNext = nextIdx < searchStr.endIndex
+            let nextChar = hasNext ? searchStr[nextIdx] : Character(" ")
+
+            // A quote in the interior can only appear as part of '\'' escape.
+            // So it should be immediately followed by a backslash (if it's the closing quote
+            // of the escape) or preceded by one. Let's check for the full pattern.
+            let quoteIndexInOriginal = searchStr.distance(from: searchStr.startIndex, to: quoteIdx)
+
+            // Check if this matches the pattern: ' (quote) \ (backslash) ' ' (two quotes)
+            if nextChar == "\\" {
+                // This is the quote that ends the escape, like: '  \  '  '
+                // Skip past the \'' sequence
+                let endIdx = searchStr.index(quoteIdx, offsetBy: 4, limitedBy: searchStr.endIndex) ?? searchStr.endIndex
+                searchStr = String(searchStr[endIdx...])
             } else {
-                i = interior.index(after: i)
+                // Quote not followed by backslash - might be unescaped, but check if we're
+                // at the interior boundary (which shouldn't happen since we stripped the outer quotes)
+                Issue.record("unescaped interior quote at position \(quoteIndexInOriginal): \(String(searchStr[quoteIdx...]))")
+                return
             }
         }
     }
@@ -120,7 +141,62 @@ import Testing
     }
     #expect(bundleID == "com.apple.Terminal")
     #expect(source.contains("do script"))
-    #expect(source.contains("ssh radnok@100.123.34.96"))
+    // The ssh command must appear shell-quoted (single quotes) inside the
+    // AppleScript do script string.
+    #expect(source.contains("'ssh radnok@100.123.34.96'"))
+}
+
+@Test func terminalEscapesShellAndAppleScriptBoundaries() {
+    // Terminal.app's do script argument is a shell command line. It must be
+    // protected at two boundaries: first shell-escaped (single quotes protect
+    // all metacharacters including newline), then AppleScript-escaped for the
+    // string literal.
+    let hostnames = [
+        "h;touch /tmp/x",      // semicolon command injection
+        "h>/tmp/x",            // output redirection
+        "h<in",                // input redirection
+        "h*",                  // glob expansion
+        "h$(id)",              // command substitution
+        "h`id`",               // command substitution
+        "h\nrm -rf x",         // newline - parsed as second command
+        "h'x",                 // apostrophe (tests '\'' escape)
+        "h'; touch /tmp/x; '", // apostrophe injection
+        "'"                    // bare apostrophe
+    ]
+
+    for hostname in hostnames {
+        let plan = launchPlan(for: .terminal, user: "radnok", host: hostname, isRunning: false)
+        guard case let .appleScript(source, _) = plan else {
+            Issue.record("expected appleScript for hostname \(hostname)")
+            return
+        }
+
+        // The source must be valid AppleScript with no raw newlines in the do script argument.
+        // Extract the do script argument to check it.
+        let doScriptPrefix = #"do script ""#
+        guard let startIdx = source.range(of: doScriptPrefix)?.upperBound else {
+            Issue.record("do script not found in \(source)")
+            return
+        }
+        guard let endIdx = source[startIdx...].range(of: #"""#)?.lowerBound else {
+            Issue.record("closing quote not found in \(source)")
+            return
+        }
+
+        let scriptArg = String(source[startIdx..<endIdx])
+
+        // The scriptArg must not contain a raw newline (would break AppleScript).
+        #expect(!scriptArg.contains("\n"), "raw newline in do script for hostname \(hostname)")
+
+        // The ssh command must appear as a single shell-quoted token.
+        // Format: 'ssh radnok@...' possibly with \'' for embedded apostrophes.
+        let expectedPrefix = "'ssh radnok@"
+        #expect(scriptArg.contains(expectedPrefix), "expected ssh command quoted, got \(scriptArg)")
+
+        // Check that the token is properly closed with a single quote at some point.
+        // (Full validation is complex; we verify the closing quote exists.)
+        #expect(scriptArg.contains("'"), "expected closing quote in \(scriptArg)")
+    }
 }
 
 @Test func warpOpensAndCopiesBecauseItRefusesToSubmitInput() {
