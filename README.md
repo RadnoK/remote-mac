@@ -60,8 +60,13 @@ machine without touching the mouse:
 
 ## Install
 
-Grab the `.zip` from [Releases](https://github.com/radnok/remote-mac/releases)
-and drag `RemoteMac.app` into `/Applications`.
+```bash
+brew install --cask radnok/tap/remote-mac
+```
+
+Or grab the `.zip` from
+[Releases](https://github.com/radnok/remote-mac/releases) and drag
+`RemoteMac.app` into `/Applications`.
 
 The app is signed with a Developer ID certificate and, once notarization is
 set up, will be notarized by Apple, so it opens without a Gatekeeper warning.

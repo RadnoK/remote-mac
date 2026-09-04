@@ -123,6 +123,27 @@ jobs:
             git -C "$RUNNER_TEMP/ghp" push origin gh-pages
           fi
 
+      - name: Update cask in the tap
+        env:
+          GH_TOKEN: ${{ secrets.TAP_TOKEN }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          SHA="$(shasum -a 256 "dist/RemoteMac-$VERSION.zip" | awk '{print $1}')"
+          git clone "https://x-access-token:$GH_TOKEN@github.com/RadnoK/homebrew-tap.git" \
+            "$RUNNER_TEMP/tap"
+          cd "$RUNNER_TEMP/tap"
+          sed -i '' "s|^  version .*|  version \"$VERSION\"|" Casks/remote-mac.rb
+          sed -i '' "s|^  sha256 .*|  sha256 \"$SHA\"|" Casks/remote-mac.rb
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/remote-mac.rb
+          if git diff --cached --quiet; then
+            echo "Cask already up to date — nothing to do"
+          else
+            git commit -m "chore: remote-mac $VERSION"
+            git push origin main
+          fi
+
       - name: Clean up keychain
         if: always()
         run: security delete-keychain "$RUNNER_TEMP/build.keychain-db" || true
