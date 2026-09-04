@@ -12,11 +12,21 @@ public struct Host: Sendable, Identifiable, Hashable, Codable {
     /// DNS-safe short name, suitable for SSH. Never contains a trailing dot.
     public let name: String
     /// Human-facing label. May contain a typographic apostrophe (U+2019).
-    public let displayName: String
+    /// `var` because `mergeHosts` overwrites it with the user's
+    /// `AppSettings.displayNameOverrides` entry, if one is set, so every
+    /// consumer (menu, quick switcher, search) sees the same resolved name.
+    public var displayName: String
     public let ipv4: String
     public let isOnline: Bool
     public let source: HostSource
     public var sshUsername: String?
+    /// Screen Sharing (VNC) port. Defaults to the well-known `screenSharingPort`
+    /// (5900) and is only ever overridden by `mergeHosts` resolving a
+    /// per-host `AppSettings.screenSharingPorts` entry — carrying the
+    /// resolved value on `Host` itself means `HostStore.refresh()`'s probe
+    /// and `screenSharingURL(for:)` both read the same number instead of one
+    /// of them silently falling back to the global default.
+    public var screenSharingPort: UInt16
 
     public init(
         id: String,
@@ -25,7 +35,8 @@ public struct Host: Sendable, Identifiable, Hashable, Codable {
         ipv4: String,
         isOnline: Bool,
         source: HostSource,
-        sshUsername: String? = nil
+        sshUsername: String? = nil,
+        screenSharingPort: UInt16 = RemoteMacCore.screenSharingPort
     ) {
         self.id = id
         self.name = name
@@ -34,5 +45,6 @@ public struct Host: Sendable, Identifiable, Hashable, Codable {
         self.isOnline = isOnline
         self.source = source
         self.sshUsername = sshUsername
+        self.screenSharingPort = screenSharingPort
     }
 }

@@ -33,6 +33,7 @@ public enum LocKey: String, CaseIterable, Sendable {
     case rowOpenSSH = "row.open_ssh"
     case rowOpenFiles = "row.open_files"
     case rowCopyAddress = "row.copy_address"
+    case rowCopyAddressCopied = "row.copy_address_copied"
 
     // Status labels (HostStatus.label)
     case statusUnknown = "status.unknown"
@@ -57,6 +58,7 @@ public enum LocKey: String, CaseIterable, Sendable {
     case settingsGeneralSection = "settings.general.section"
     case settingsTerminalField = "settings.general.terminal_field"
     case settingsSSHUsernameField = "settings.general.ssh_username_field"
+    case settingsSSHUsernameFieldHelp = "settings.general.ssh_username_field_help"
     case settingsLaunchAtLogin = "settings.general.launch_at_login"
     case settingsLaunchAtLoginHelp = "settings.general.launch_at_login_help"
     case settingsOpenSystemSettings = "settings.general.open_system_settings"
@@ -79,6 +81,15 @@ public enum LocKey: String, CaseIterable, Sendable {
     case settingsHostsEmpty = "settings.hosts.empty"
     case settingsHostsListSection = "settings.hosts.list_section"
     case settingsHostDetailSection = "settings.hosts.detail_section"
+    case settingsHostBadgeTailscale = "settings.hosts.badge_tailscale"
+    case settingsHostBadgeManual = "settings.hosts.badge_manual"
+    case settingsHostRemoveTailscaleHelp = "settings.hosts.remove_tailscale_help"
+    case settingsHostSSHUserField = "settings.hosts.ssh_user_field"
+    case settingsHostShowInMenu = "settings.hosts.show_in_menu"
+    case settingsHostDisplayNameField = "settings.hosts.display_name_field"
+    case settingsHostPortField = "settings.hosts.port_field"
+    case settingsHostConnectionSection = "settings.hosts.connection_section"
+    case settingsHostAppearanceSection = "settings.hosts.appearance_section"
 
     // Settings — about
     case settingsAboutSection = "settings.about.section"

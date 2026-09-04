@@ -1,8 +1,9 @@
 import Foundation
 
 /// Combines auto-discovered Tailscale hosts with the user's manual entries,
-/// applies hidden-host filtering, and resolves the SSH username for each.
-/// A manual host whose address duplicates a Tailscale IP is dropped, because
+/// applies hidden-host filtering, and resolves each host's SSH username,
+/// display name override and Screen Sharing port from `AppSettings`. A
+/// manual host whose address duplicates a Tailscale IP is dropped, because
 /// the Tailscale entry carries a live online flag the manual one lacks.
 public func mergeHosts(tailscale: [Host], settings: AppSettings) -> [Host] {
     let hidden = Set(settings.hiddenHostIDs)
@@ -34,6 +35,8 @@ public func mergeHosts(tailscale: [Host], settings: AppSettings) -> [Host] {
         .map { host in
             var resolved = host
             resolved.sshUsername = settings.sshUsername(for: host)
+            resolved.displayName = settings.displayName(for: host, fallback: host.displayName)
+            resolved.screenSharingPort = settings.screenSharingPort(for: host)
             return resolved
         }
         .sorted { $0.displayName < $1.displayName }

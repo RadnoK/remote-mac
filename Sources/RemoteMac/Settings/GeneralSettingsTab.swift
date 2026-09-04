@@ -28,6 +28,9 @@ struct GeneralSettingsTab: View {
                 }
 
                 TextField(store.l10n(.settingsSSHUsernameField), text: $store.settings.defaultSSHUsername)
+                Text(store.l10n(.settingsSSHUsernameFieldHelp))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             } header: {
                 Text(store.l10n(.settingsGeneralSection))
             }

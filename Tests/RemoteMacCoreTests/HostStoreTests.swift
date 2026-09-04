@@ -33,6 +33,20 @@ private struct SlowProbe: PortProbing {
     }
 }
 
+/// Records the port each host was probed on, so a test can prove a per-host
+/// `AppSettings.screenSharingPorts` override actually reaches
+/// `HostStore.refresh()`'s probe call rather than the global default port
+/// silently being used instead. An `actor` keeps recording safe across the
+/// concurrent `withTaskGroup` probe calls in `refresh()`.
+private actor PortRecordingProbe: PortProbing {
+    private(set) var portsByHost: [String: UInt16] = [:]
+
+    func probe(host: String, port: UInt16, timeout: Duration) async -> ProbeOutcome {
+        portsByHost[host] = port
+        return .listening
+    }
+}
+
 private struct NoopLauncher: Launching {
     func openScreenSharing(host: RemoteMacCore.Host) {}
     func openFileSharing(host: RemoteMacCore.Host) {}
@@ -160,6 +174,33 @@ private func makeStore(
     #expect(mini?.status == .online)
     #expect(mbp?.status == .screenSharingOff)
     #expect(store.tailscaleError == nil)
+}
+
+/// A per-host `screenSharingPorts` override must reach the probe that
+/// decides whether the row shows as available — otherwise the app would
+/// display a host as offline/sharing-off just because it probed the wrong
+/// port.
+@MainActor
+@Test func customPortReachesTheProbe() async {
+    let probe = PortRecordingProbe()
+    let store = makeStore(runner: StubRunner(json: oneMacJSON), probe: probe)
+    store.settings.screenSharingPorts = ["nodekey:aaa": 5901]
+
+    await store.refresh()
+
+    let portsByHost = await probe.portsByHost
+    #expect(portsByHost["100.123.34.96"] == 5901)
+}
+
+@MainActor
+@Test func hostWithoutAPortOverrideIsProbedOnTheDefaultPort() async {
+    let probe = PortRecordingProbe()
+    let store = makeStore(runner: StubRunner(json: oneMacJSON), probe: probe)
+
+    await store.refresh()
+
+    let portsByHost = await probe.portsByHost
+    #expect(portsByHost["100.123.34.96"] == screenSharingPort)
 }
 
 @MainActor

@@ -160,7 +160,7 @@ public final class HostStore {
             for host in hosts {
                 group.addTask {
                     let outcome = await probe.probe(
-                        host: host.ipv4, port: screenSharingPort, timeout: .seconds(2))
+                        host: host.ipv4, port: host.screenSharingPort, timeout: .seconds(2))
                     return (host.id, outcome)
                 }
             }

@@ -27,6 +27,7 @@
 "row.open_ssh" = "Otwórz SSH";
 "row.open_files" = "Otwórz pliki (SMB)";
 "row.copy_address" = "Kopiuj adres IP";
+"row.copy_address_copied" = "Skopiowano!";
 
 /* Etykiety statusu */
 "status.unknown" = "Nieznany";
@@ -50,7 +51,8 @@
 /* Ustawienia — ogólne */
 "settings.general.section" = "Terminal";
 "settings.general.terminal_field" = "Terminal:";
-"settings.general.ssh_username_field" = "Użytkownik SSH:";
+"settings.general.ssh_username_field" = "Domyślny użytkownik SSH:";
+"settings.general.ssh_username_field_help" = "Używany dla maszyn bez własnego użytkownika SSH, ustawianego w zakładce Maszyny.";
 "settings.general.launch_at_login" = "Uruchamiaj przy logowaniu";
 "settings.general.launch_at_login_help" = "Uruchamia RemoteMac automatycznie po zalogowaniu.";
 "settings.general.open_system_settings" = "Otwórz Ustawienia systemowe";
@@ -73,6 +75,15 @@
 "settings.hosts.empty" = "Brak ręcznie dodanych maszyn.";
 "settings.hosts.list_section" = "Ręcznie dodane";
 "settings.hosts.detail_section" = "Maszyna";
+"settings.hosts.badge_tailscale" = "Tailscale";
+"settings.hosts.badge_manual" = "Ręczna";
+"settings.hosts.remove_tailscale_help" = "Maszyny Tailscale są wykrywane automatycznie i nie można ich stąd usunąć.";
+"settings.hosts.ssh_user_field" = "Użytkownik SSH";
+"settings.hosts.show_in_menu" = "Pokaż w menu";
+"settings.hosts.display_name_field" = "Nazwa wyświetlana";
+"settings.hosts.port_field" = "Port Screen Sharing";
+"settings.hosts.connection_section" = "Połączenie";
+"settings.hosts.appearance_section" = "Wyświetlanie";
 
 /* Ustawienia — o aplikacji */
 "settings.about.section" = "O aplikacji";

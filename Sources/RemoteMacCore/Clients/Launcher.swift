@@ -17,8 +17,17 @@ public protocol Launching: Sendable {
 
 /// Credentials are deliberately absent: Screen Sharing stores the password in
 /// the macOS Keychain, so the app never handles secrets.
+///
+/// `vnc://host` and `vnc://host:5900` are equivalent, so the port is only
+/// appended when `host.screenSharingPort` differs from the default — keeping
+/// the common case's URL clean while still letting a per-host override (see
+/// `AppSettings.screenSharingPorts`, resolved onto `Host` by `mergeHosts`)
+/// actually reach Screen Sharing instead of silently connecting to 5900.
 public func screenSharingURL(for host: Host) -> URL? {
-    URL(string: "vnc://\(host.ipv4)")
+    guard host.screenSharingPort != RemoteMacCore.screenSharingPort else {
+        return URL(string: "vnc://\(host.ipv4)")
+    }
+    return URL(string: "vnc://\(host.ipv4):\(host.screenSharingPort)")
 }
 
 public func fileSharingURL(for host: Host) -> URL? {
