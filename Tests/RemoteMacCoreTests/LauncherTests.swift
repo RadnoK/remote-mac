@@ -11,7 +11,7 @@ private struct FakeLauncher: Launching {
     func openScreenSharing(host: RemoteMacCore.Host) {}
     func openFileSharing(host: RemoteMacCore.Host) {}
     func copyToClipboard(_ text: String) {}
-    func execute(_ plan: LaunchPlan) {}
+    func execute(_ plan: LaunchPlan) -> Bool { true }
     func isRunning(bundleIdentifier: String) -> Bool { false }
     func isInstalled(bundleIdentifier: String) -> Bool { installed.contains(bundleIdentifier) }
 }
