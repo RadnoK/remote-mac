@@ -177,3 +177,41 @@ private func makeStore(
     store.openSSH(to: host)
     #expect(store.launchError != nil)
 }
+
+@MainActor
+@Test func clearLaunchErrorDismissesTheBanner() async {
+    let store = makeStore(
+        runner: StubRunner(json: twoMacsJSON),
+        probe: StubProbe(outcomes: [:]),
+        launcher: FailingLauncher()
+    )
+    await store.refresh()
+
+    guard let host = store.entries.first?.host else {
+        Issue.record("expected at least one host")
+        return
+    }
+    store.openSSH(to: host)
+    #expect(store.launchError != nil)
+
+    store.clearLaunchError()
+    #expect(store.launchError == nil)
+}
+
+@MainActor
+@Test func unwritableSettingsPathSetsSettingsError() async {
+    // `/dev/null` is not a directory, so `createDirectory` under it always
+    // fails — this simulates a save failure without touching real disk state.
+    let unwritableURL = URL(fileURLWithPath: "/dev/null/settings.json")
+    let store = HostStore(
+        tailscale: TailscaleClient(runner: StubRunner(json: twoMacsJSON), executablePath: "/fake/Tailscale"),
+        probe: StubProbe(outcomes: [:]),
+        settingsStore: SettingsStore(fileURL: unwritableURL),
+        launcher: NoopLauncher()
+    )
+    #expect(store.settingsError == nil)
+
+    store.settings.defaultSSHUsername = "someone-else"
+
+    #expect(store.settingsError != nil)
+}

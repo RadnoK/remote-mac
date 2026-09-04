@@ -23,8 +23,20 @@ public final class HostStore {
     /// silent: the user would click "SSH" and nothing would happen, with no
     /// dialog, message, or log to explain why.
     public private(set) var launchError: String?
+    /// User-facing message for a failed settings write. Persistence used to
+    /// swallow the error with `try?`, so a save failure (e.g. an unwritable
+    /// path or a full disk) would silently discard the user's edit with no
+    /// feedback at all.
+    public private(set) var settingsError: String?
     public var settings: AppSettings {
-        didSet { try? settingsStore.save(settings) }
+        didSet {
+            do {
+                try settingsStore.save(settings)
+                settingsError = nil
+            } catch {
+                settingsError = "Nie udało się zapisać ustawień."
+            }
+        }
     }
 
     private let tailscale: TailscaleClient
@@ -108,6 +120,14 @@ public final class HostStore {
 
     public func openFiles(for host: Host) {
         launcher.openFileSharing(host: host)
+    }
+
+    /// Dismisses the current launch-failure banner. Without this, a single
+    /// denied Automation prompt would leave the orange warning showing on
+    /// every menu open forever, since it otherwise only clears on the next
+    /// `openSSH` call.
+    public func clearLaunchError() {
+        launchError = nil
     }
 
     public func copyAddress(of host: Host) {

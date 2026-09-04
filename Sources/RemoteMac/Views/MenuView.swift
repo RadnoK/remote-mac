@@ -16,11 +16,22 @@ struct MenuView: View {
             }
 
             if let error = store.launchError {
-                Label(error, systemImage: "exclamationmark.triangle")
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-                    .padding(.horizontal, 10)
-                    .padding(.top, 6)
+                HStack(alignment: .top, spacing: 4) {
+                    Label(error, systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                    Spacer(minLength: 4)
+                    Button {
+                        store.clearLaunchError()
+                    } label: {
+                        Image(systemName: "xmark.circle")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 10)
+                .padding(.top, 6)
             }
 
             if store.entries.isEmpty {
