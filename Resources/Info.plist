@@ -32,13 +32,17 @@
     <key>LSUIElement</key>
     <true/>
     <key>NSAppleEventsUsageDescription</key>
-    <string>RemoteMac otwiera sesje SSH w wybranym przez Ciebie terminalu.</string>
+    <string>RemoteMac needs this to open an SSH session in Terminal. Ghostty and iTerm2 do not require it.</string>
     <key>SUEnableAutomaticChecks</key>
     <true/>
-    <!-- PLACEHOLDER: does not point at a real appcast yet. See Scripts/build-app.sh
-         and the phase2-sparkle-report.md for what must happen before shipping. -->
+    <!-- PLACEHOLDER: this URL does not resolve yet. It will start working once the
+         owner publishes gh-pages for this repo per Scripts/release.sh's "Next steps"
+         output and .github/workflows/release.yml's "Publish appcast to gh-pages" step.
+         See the phase4 release report for exactly what is still required. -->
     <key>SUFeedURL</key>
-    <string>https://github.com/radnok/remote-mac/releases/latest/download/appcast.xml</string>
+    <string>https://radnok.github.io/remote-mac/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>tsvGxAlVjurDkH3r63omMZbOOc5OUb8yxPl2AfKN1h8=</string>
     <key>SUScheduledCheckInterval</key>
     <integer>86400</integer>
 </dict>

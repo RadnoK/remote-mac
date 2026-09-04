@@ -1,0 +1,128 @@
+name: Release
+
+# Tags vX.Y.Z only — secrets are never available to PRs from forks.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine version from tag
+        id: ver
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Check version matches Info.plist
+        run: |
+          PLIST_VER="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)"
+          if [[ "$PLIST_VER" != "${{ steps.ver.outputs.version }}" ]]; then
+            echo "::error::Tag ${{ steps.ver.outputs.version }} != Info.plist $PLIST_VER"
+            exit 1
+          fi
+
+      - name: Tests
+        run: swift test
+
+      # The certificate lands in a temporary keychain, deleted after the job.
+      - name: Import Developer ID certificate
+        env:
+          P12_BASE64: ${{ secrets.DEVELOPER_ID_P12 }}
+          P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          CERT_PATH="$RUNNER_TEMP/cert.p12"
+          KEYCHAIN="$RUNNER_TEMP/build.keychain-db"
+
+          echo -n "$P12_BASE64" | base64 --decode -o "$CERT_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$CERT_PATH" -P "$P12_PASSWORD" -A \
+            -t cert -f pkcs12 -k "$KEYCHAIN"
+          # Without this, codesign hangs on a key-access prompt
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
+          security list-keychain -d user -s "$KEYCHAIN" login.keychain-db
+
+          rm -f "$CERT_PATH"
+
+          IDENTITY="$(security find-identity -v -p codesigning "$KEYCHAIN" \
+            | grep "Developer ID Application" | head -1 \
+            | awk '{print $2}')"
+          if [[ -z "$IDENTITY" ]]; then
+            echo "::error::Developer ID identity not found in the keychain"
+            exit 1
+          fi
+          echo "SIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+
+      - name: Sparkle tools
+        run: |
+          curl -sL -o "$RUNNER_TEMP/sparkle.tar.xz" \
+            "https://github.com/sparkle-project/Sparkle/releases/download/2.9.6/Sparkle-2.9.6.tar.xz"
+          mkdir -p "$RUNNER_TEMP/sparkle"
+          tar -xf "$RUNNER_TEMP/sparkle.tar.xz" -C "$RUNNER_TEMP/sparkle"
+          echo "SPARKLE_BIN=$RUNNER_TEMP/sparkle/bin" >> "$GITHUB_ENV"
+
+      - name: notarytool profile
+        env:
+          APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
+          APP_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+        run: |
+          xcrun notarytool store-credentials remotemac-notary \
+            --apple-id "$APPLE_ID" \
+            --team-id "$TEAM_ID" \
+            --password "$APP_PASSWORD"
+
+      - name: Build, notarization, appcast
+        env:
+          # EdDSA private key read by generate_appcast from the environment
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: ./Scripts/release.sh "${{ steps.ver.outputs.version }}"
+
+      # Idempotent — on a re-run the release already exists
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ZIP: dist/RemoteMac-${{ steps.ver.outputs.version }}.zip
+        run: |
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            echo "Release already exists — replacing the artifact"
+            gh release upload "$GITHUB_REF_NAME" "$ZIP" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "$ZIP" \
+              --title "RemoteMac ${{ steps.ver.outputs.version }}" \
+              --generate-notes
+          fi
+
+      - name: Publish appcast to gh-pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin gh-pages
+          git worktree add "$RUNNER_TEMP/ghp" gh-pages
+          cp dist/appcast/appcast.xml "$RUNNER_TEMP/ghp/appcast.xml"
+          git -C "$RUNNER_TEMP/ghp" add appcast.xml
+          if git -C "$RUNNER_TEMP/ghp" diff --cached --quiet; then
+            echo "Appcast unchanged"
+          else
+            git -C "$RUNNER_TEMP/ghp" commit \
+              -m "chore: appcast for ${{ steps.ver.outputs.version }}"
+            git -C "$RUNNER_TEMP/ghp" push origin gh-pages
+          fi
+
+      - name: Clean up keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/build.keychain-db" || true

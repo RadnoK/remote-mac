@@ -60,6 +60,7 @@ SIGN=(codesign --force --options runtime --timestamp --sign "$CERT_SHA")
 codesign --force --options runtime \
   --sign "$CERT_SHA" \
   --identifier io.eightlines.remotemac \
+  --entitlements "Resources/entitlements.plist" \
   "$APP"
 
 codesign --verify --deep --strict --verbose=2 "$APP"
