@@ -4,9 +4,15 @@ import PackageDescription
 let package = Package(
     name: "RemoteMac",
     platforms: [.macOS(.v15)],
+    dependencies: [
+        .package(url: "https://github.com/swiftlang/swift-subprocess", from: "1.0.0"),
+    ],
     targets: [
         .target(
             name: "RemoteMacCore",
+            dependencies: [
+                .product(name: "Subprocess", package: "swift-subprocess"),
+            ],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .executableTarget(
