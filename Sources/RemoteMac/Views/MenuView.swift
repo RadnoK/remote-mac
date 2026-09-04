@@ -4,6 +4,7 @@ import SwiftUI
 struct MenuView: View {
     let store: HostStore
     @Environment(\.openSettings) private var openSettings
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -46,6 +47,10 @@ struct MenuView: View {
             }
 
             Divider().padding(.vertical, 4)
+
+            Button("Szybkie połączenie…") { openWindow(id: "quick-switcher") }
+                .buttonStyle(.borderless)
+                .padding(.horizontal, 10)
 
             Button("Odśwież") {
                 Task { await store.refresh() }

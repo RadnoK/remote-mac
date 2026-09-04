@@ -16,5 +16,11 @@ struct RemoteMacApp: App {
         Settings {
             SettingsView(store: store)
         }
+
+        Window("Szybkie połączenie", id: "quick-switcher") {
+            QuickSwitcher(store: store)
+        }
+        .windowResizability(.contentSize)
+        .defaultPosition(.center)
     }
 }

@@ -4,7 +4,7 @@ import Foundation
 /// how tightly the query matched — a smaller span between the first and last
 /// matched character ranks higher.
 public func searchHosts(_ hosts: [Host], query: String) -> [Host] {
-    let needle = normalize(query)
+    let needle = normalize(query).trimmingCharacters(in: .whitespacesAndNewlines)
     guard !needle.isEmpty else { return hosts }
 
     return hosts

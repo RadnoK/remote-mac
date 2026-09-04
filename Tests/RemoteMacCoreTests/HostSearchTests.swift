@@ -14,6 +14,11 @@ private let hosts = [
     #expect(searchHosts(hosts, query: "") == hosts)
 }
 
+@Test func whitespaceOnlyQueryReturnsEverythingUnchanged() {
+    // A stray space must not be treated as a real query and re-sort the list.
+    #expect(searchHosts(hosts, query: "   ") == hosts)
+}
+
 @Test func matchesSubsequenceNotJustPrefix() {
     let results = searchHosts(hosts, query: "mini")
     #expect(results.first?.name == "konrads-mac-mini")
