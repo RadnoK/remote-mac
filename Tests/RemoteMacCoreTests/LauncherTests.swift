@@ -2,8 +2,8 @@ import Foundation
 import Testing
 @testable import RemoteMacCore
 
-private let mini = Host(id: "1", name: "konrads-mac-mini", displayName: "Mac mini",
-                        ipv4: "100.123.34.96", isOnline: true, source: .tailscale)
+private let mini = Host(id: "1", name: "studio-mac-mini", displayName: "Mac mini",
+                        ipv4: "100.64.10.1", isOnline: true, source: .tailscale)
 
 private struct FakeLauncher: Launching {
     let installed: Set<String>
@@ -19,7 +19,7 @@ private struct FakeLauncher: Launching {
 @Test func screenSharingURLUsesVNCScheme() {
     let url = try? #require(screenSharingURL(for: mini))
     #expect(url?.scheme == "vnc")
-    #expect(url?.host == "100.123.34.96")
+    #expect(url?.host == "100.64.10.1")
 }
 
 @Test func screenSharingURLOmitsCredentials() {
@@ -33,7 +33,7 @@ private struct FakeLauncher: Launching {
 @Test func fileSharingURLUsesSMBScheme() {
     let url = fileSharingURL(for: mini)
     #expect(url?.scheme == "smb")
-    #expect(url?.host == "100.123.34.96")
+    #expect(url?.host == "100.64.10.1")
 }
 
 /// `vnc://host` and `vnc://host:5900` are equivalent, so the default port
@@ -42,7 +42,7 @@ private struct FakeLauncher: Launching {
 @Test func screenSharingURLOmitsTheDefaultPort() {
     #expect(mini.screenSharingPort == screenSharingPort)
     let url = screenSharingURL(for: mini)
-    #expect(url?.absoluteString == "vnc://100.123.34.96")
+    #expect(url?.absoluteString == "vnc://100.64.10.1")
     #expect(url?.port == nil)
 }
 
@@ -51,12 +51,12 @@ private struct FakeLauncher: Launching {
 /// — otherwise the app would probe the custom port but still connect to
 /// 5900.
 @Test func screenSharingURLIncludesACustomPort() {
-    let custom = Host(id: "1", name: "konrads-mac-mini", displayName: "Mac mini",
-                      ipv4: "100.123.34.96", isOnline: true, source: .tailscale,
+    let custom = Host(id: "1", name: "studio-mac-mini", displayName: "Mac mini",
+                      ipv4: "100.64.10.1", isOnline: true, source: .tailscale,
                       screenSharingPort: 5901)
     let url = screenSharingURL(for: custom)
     #expect(url?.port == 5901)
-    #expect(url?.absoluteString == "vnc://100.123.34.96:5901")
+    #expect(url?.absoluteString == "vnc://100.64.10.1:5901")
 }
 
 @Test func installedTerminalsFiltersToWhatIsPresent() {

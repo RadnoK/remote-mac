@@ -79,7 +79,7 @@ private func makeHost(_ node: Node) -> Host? {
 }
 
 /// `DNSName` arrives as an FQDN with a trailing dot
-/// ("konrads-mac-mini.tail1ee4df.ts.net."). The first segment is the
+/// ("studio-mac-mini.tailnet-1234.ts.net."). The first segment is the
 /// DNS-safe short name; `HostName` is not usable here because it may contain
 /// a typographic apostrophe and is "localhost" on iOS devices.
 private func shortName(fromDNSName dnsName: String?) -> String? {

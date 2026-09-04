@@ -18,17 +18,17 @@ private struct StubRunner: CommandRunning {
 }
 
 private let host = Host(id: "1", name: "mini", displayName: "Mac mini",
-                        ipv4: "100.123.34.96", isOnline: true,
-                        source: .tailscale, sshUsername: "radnok")
+                        ipv4: "100.64.10.1", isOnline: true,
+                        source: .tailscale, sshUsername: "alex")
 
 @Test func parsesUnlockedSessionWithUser() {
-    let details = parseConsoleState("radnok\nNo\n")
-    #expect(details.consoleUser == "radnok")
+    let details = parseConsoleState("alex\nNo\n")
+    #expect(details.consoleUser == "alex")
     #expect(details.isScreenLocked == false)
 }
 
 @Test func parsesLockedSession() {
-    let details = parseConsoleState("radnok\nYes\n")
+    let details = parseConsoleState("alex\nYes\n")
     #expect(details.isScreenLocked == true)
 }
 
@@ -50,15 +50,15 @@ private let host = Host(id: "1", name: "mini", displayName: "Mac mini",
 /// by `consoleStateCommand` always write the final two lines.
 @Test func toleratesPrependedBannerLines() {
     let withBanner = parseConsoleState(
-        "Last login: Tue Jan 1 00:00:00 on ttys000\nWelcome to macOS\nradnok\nNo\n")
-    let withoutBanner = parseConsoleState("radnok\nNo\n")
+        "Last login: Tue Jan 1 00:00:00 on ttys000\nWelcome to macOS\nalex\nNo\n")
+    let withoutBanner = parseConsoleState("alex\nNo\n")
     #expect(withBanner == withoutBanner)
-    #expect(withBanner.consoleUser == "radnok")
+    #expect(withBanner.consoleUser == "alex")
     #expect(withBanner.isScreenLocked == false)
 }
 
 @Test func singleLineOutputYieldsNilLockState() {
-    let details = parseConsoleState("radnok\n")
+    let details = parseConsoleState("alex\n")
     #expect(details.consoleUser == nil)
     #expect(details.isScreenLocked == nil)
 }
@@ -66,13 +66,13 @@ private let host = Host(id: "1", name: "mini", displayName: "Mac mini",
 @Test func usesBatchModeSoAPasswordPromptCannotHang() async {
     let recorder = StubRunner.Recorder()
     let client = SSHStatusClient(
-        runner: StubRunner(result: .success(Data("radnok\nNo\n".utf8)), recorder: recorder))
+        runner: StubRunner(result: .success(Data("alex\nNo\n".utf8)), recorder: recorder))
     _ = await client.fetchDetails(host: host)
 
     // ConnectTimeout does not bound the auth phase, so BatchMode is the
     // actual control that prevents an 8 s hang.
     #expect(recorder.arguments.contains("BatchMode=yes"))
-    #expect(recorder.arguments.contains("radnok@100.123.34.96"))
+    #expect(recorder.arguments.contains("alex@100.64.10.1"))
 }
 
 @Test func missingKeysReturnNilRatherThanThrowing() async {
@@ -85,6 +85,6 @@ private let host = Host(id: "1", name: "mini", displayName: "Mac mini",
     let anonymous = Host(id: "2", name: "x", displayName: "x", ipv4: "10.0.0.1",
                          isOnline: true, source: .manual, sshUsername: nil)
     let client = SSHStatusClient(
-        runner: StubRunner(result: .success(Data("radnok\nNo\n".utf8)), recorder: nil))
+        runner: StubRunner(result: .success(Data("alex\nNo\n".utf8)), recorder: nil))
     #expect(await client.fetchDetails(host: anonymous) == nil)
 }

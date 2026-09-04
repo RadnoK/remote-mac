@@ -68,16 +68,16 @@ private struct FailingLauncher: Launching {
 private let twoMacsJSON = """
 {"BackendState":"Running",
  "Self":{"PublicKey":"nodekey:aaa","HostName":"Mini","DNSName":"mini.ts.net.",
-         "OS":"macOS","TailscaleIPs":["100.123.34.96"],"Online":true},
+         "OS":"macOS","TailscaleIPs":["100.64.10.1"],"Online":true},
  "Peer":{"nodekey:bbb":{"PublicKey":"nodekey:bbb","HostName":"MBP",
-         "DNSName":"mbp.ts.net.","OS":"macOS","TailscaleIPs":["100.108.216.101"],
+         "DNSName":"mbp.ts.net.","OS":"macOS","TailscaleIPs":["100.64.10.2"],
          "Online":true}}}
 """
 
 private let oneMacJSON = """
 {"BackendState":"Running",
  "Self":{"PublicKey":"nodekey:aaa","HostName":"Mini","DNSName":"mini.ts.net.",
-         "OS":"macOS","TailscaleIPs":["100.123.34.96"],"Online":true}}
+         "OS":"macOS","TailscaleIPs":["100.64.10.1"],"Online":true}}
 """
 
 /// Returns `oneMacJSON` for the first call and `twoMacsJSON` for every call
@@ -162,8 +162,8 @@ private func makeStore(
     let store = makeStore(
         runner: StubRunner(json: twoMacsJSON),
         probe: StubProbe(outcomes: [
-            "100.123.34.96": .listening,
-            "100.108.216.101": .refused,
+            "100.64.10.1": .listening,
+            "100.64.10.2": .refused,
         ])
     )
     await store.refresh()
@@ -189,7 +189,7 @@ private func makeStore(
     await store.refresh()
 
     let portsByHost = await probe.portsByHost
-    #expect(portsByHost["100.123.34.96"] == 5901)
+    #expect(portsByHost["100.64.10.1"] == 5901)
 }
 
 @MainActor
@@ -200,14 +200,14 @@ private func makeStore(
     await store.refresh()
 
     let portsByHost = await probe.portsByHost
-    #expect(portsByHost["100.123.34.96"] == screenSharingPort)
+    #expect(portsByHost["100.64.10.1"] == screenSharingPort)
 }
 
 @MainActor
 @Test func isLoadingStartsTrueAndClearsAfterFirstRefresh() async {
     let store = makeStore(
         runner: StubRunner(json: twoMacsJSON),
-        probe: StubProbe(outcomes: ["100.123.34.96": .listening])
+        probe: StubProbe(outcomes: ["100.64.10.1": .listening])
     )
     #expect(store.isLoading)
 
@@ -223,7 +223,7 @@ private func makeStore(
     // must not flip back on.
     let store = makeStore(
         runner: StubRunner(json: twoMacsJSON),
-        probe: StubProbe(outcomes: ["100.123.34.96": .listening])
+        probe: StubProbe(outcomes: ["100.64.10.1": .listening])
     )
     await store.refresh()
     #expect(!store.isLoading)
@@ -283,7 +283,7 @@ private func makeStore(
     // not their sum.
     let store = makeStore(
         runner: StubRunner(json: twoMacsJSON),
-        probe: SlowProbe(outcomes: ["100.123.34.96": .listening])
+        probe: SlowProbe(outcomes: ["100.64.10.1": .listening])
     )
     let clock = ContinuousClock()
     let start = clock.now
@@ -413,7 +413,7 @@ private func makeStore(
 @Test func pollingRefreshesRepeatedly() async throws {
     let store = makeStore(
         runner: StubRunner(json: twoMacsJSON),
-        probe: StubProbe(outcomes: ["100.123.34.96": .listening])
+        probe: StubProbe(outcomes: ["100.64.10.1": .listening])
     )
     store.startPolling(interval: .milliseconds(120))
     defer { store.stopPolling() }
@@ -565,7 +565,7 @@ private actor FirstCallGatedSSHRunner: CommandRunning {
     let sshStatus = SSHStatusClient(runner: sshRunner)
     let store = makeStore(
         runner: StubRunner(json: oneMacJSON),
-        probe: StubProbe(outcomes: ["100.123.34.96": .listening]),
+        probe: StubProbe(outcomes: ["100.64.10.1": .listening]),
         sshStatus: sshStatus
     )
 
@@ -623,7 +623,7 @@ private actor PerHostSSHRunner: CommandRunning {
         if failFromSecondCall.contains(ip), isSecondOrLaterCall {
             return Data()
         }
-        return Data("radnok-\(ip)\nNo\n".utf8)
+        return Data("alex-\(ip)\nNo\n".utf8)
     }
 }
 
@@ -636,12 +636,12 @@ private actor PerHostSSHRunner: CommandRunning {
 /// good details from the previous refresh a moment ago.
 @MainActor
 @Test func partialEnrichmentFailurePreservesThatHostsPreviousDetails() async throws {
-    let sshRunner = PerHostSSHRunner(failFromSecondCall: ["100.108.216.101"]) // mbp fails on 2nd refresh
+    let sshRunner = PerHostSSHRunner(failFromSecondCall: ["100.64.10.2"]) // mbp fails on 2nd refresh
     let store = makeStore(
         runner: StubRunner(json: twoMacsJSON),
         probe: StubProbe(outcomes: [
-            "100.123.34.96": .listening,
-            "100.108.216.101": .listening,
+            "100.64.10.1": .listening,
+            "100.64.10.2": .listening,
         ]),
         sshStatus: SSHStatusClient(runner: sshRunner)
     )
@@ -649,9 +649,9 @@ private actor PerHostSSHRunner: CommandRunning {
     await store.refresh()
     let mini = store.entries.first { $0.host.name == "mini" }
     let mbp = store.entries.first { $0.host.name == "mbp" }
-    #expect(mini?.details?.consoleUser == "radnok-100.123.34.96")
+    #expect(mini?.details?.consoleUser == "alex-100.64.10.1")
     let mbpDetailsAfterFirstRefresh = mbp?.details
-    #expect(mbpDetailsAfterFirstRefresh?.consoleUser == "radnok-100.108.216.101")
+    #expect(mbpDetailsAfterFirstRefresh?.consoleUser == "alex-100.64.10.2")
 
     // Second refresh: mbp's SSH call now fails (returns nil details), mini's
     // still succeeds.
@@ -660,7 +660,7 @@ private actor PerHostSSHRunner: CommandRunning {
     let mbpAfterSecondRefresh = store.entries.first { $0.host.name == "mbp" }
 
     // mini's details refresh normally.
-    #expect(miniAfterSecondRefresh?.details?.consoleUser == "radnok-100.123.34.96")
+    #expect(miniAfterSecondRefresh?.details?.consoleUser == "alex-100.64.10.1")
     // mbp's enrichment failed this tick, but its details from the first
     // refresh must still be present, not nil.
     #expect(mbpAfterSecondRefresh?.details == mbpDetailsAfterFirstRefresh)
@@ -668,8 +668,8 @@ private actor PerHostSSHRunner: CommandRunning {
 }
 
 private let subtitleHost = Host(id: "1", name: "mini", displayName: "Mac mini",
-                                ipv4: "100.123.34.96", isOnline: true,
-                                source: .tailscale, sshUsername: "radnok")
+                                ipv4: "100.64.10.1", isOnline: true,
+                                source: .tailscale, sshUsername: "alex")
 
 @MainActor
 private func makeTestL10n() throws -> L10n {
@@ -686,23 +686,23 @@ private func makeTestL10n() throws -> L10n {
 @MainActor
 @Test func subtitleShowsIPAndStatusWhenNoDetails() throws {
     let entry = HostEntry(host: subtitleHost, status: .online)
-    #expect(hostSubtitle(for: entry, l10n: try makeTestL10n()) == "100.123.34.96 · Available")
+    #expect(hostSubtitle(for: entry, l10n: try makeTestL10n()) == "100.64.10.1 · Available")
 }
 
 @MainActor
 @Test func subtitleShowsIPAndUserWhenUnlockedWithDetails() throws {
     let entry = HostEntry(
         host: subtitleHost, status: .online,
-        details: HostDetails(consoleUser: "radnok", isScreenLocked: false))
-    #expect(hostSubtitle(for: entry, l10n: try makeTestL10n()) == "100.123.34.96 · radnok")
+        details: HostDetails(consoleUser: "alex", isScreenLocked: false))
+    #expect(hostSubtitle(for: entry, l10n: try makeTestL10n()) == "100.64.10.1 · alex")
 }
 
 @MainActor
 @Test func subtitleAppendsLockedIndicatorWhenLockedWithDetails() throws {
     let entry = HostEntry(
         host: subtitleHost, status: .online,
-        details: HostDetails(consoleUser: "radnok", isScreenLocked: true))
-    #expect(hostSubtitle(for: entry, l10n: try makeTestL10n()) == "100.123.34.96 · radnok · locked")
+        details: HostDetails(consoleUser: "alex", isScreenLocked: true))
+    #expect(hostSubtitle(for: entry, l10n: try makeTestL10n()) == "100.64.10.1 · alex · locked")
 }
 
 @MainActor
@@ -710,24 +710,24 @@ private func makeTestL10n() throws -> L10n {
     let entry = HostEntry(
         host: subtitleHost, status: .online,
         details: HostDetails(consoleUser: nil, isScreenLocked: true))
-    #expect(hostSubtitle(for: entry, l10n: try makeTestL10n()) == "100.123.34.96 · locked")
+    #expect(hostSubtitle(for: entry, l10n: try makeTestL10n()) == "100.64.10.1 · locked")
 }
 
 /// Details are carried forward across refreshes to stop enriched rows from
 /// flickering. That carry-forward must not survive the host going away: a
-/// sleeping Mac showing "radnok · locked" would hide the very fact the user
+/// sleeping Mac showing "alex · locked" would hide the very fact the user
 /// opened the menu to learn.
 @MainActor
 @Test func subtitleFallsBackToStatusWhenHostIsNoLongerReachable() throws {
-    let stale = HostDetails(consoleUser: "radnok", isScreenLocked: true)
+    let stale = HostDetails(consoleUser: "alex", isScreenLocked: true)
     let l10n = try makeTestL10n()
 
     let offline = HostEntry(host: subtitleHost, status: .offline, details: stale)
-    #expect(hostSubtitle(for: offline, l10n: l10n) == "100.123.34.96 · Offline")
+    #expect(hostSubtitle(for: offline, l10n: l10n) == "100.64.10.1 · Offline")
 
     let sharingOff = HostEntry(host: subtitleHost, status: .screenSharingOff, details: stale)
-    #expect(hostSubtitle(for: sharingOff, l10n: l10n) == "100.123.34.96 · Sharing off")
+    #expect(hostSubtitle(for: sharingOff, l10n: l10n) == "100.64.10.1 · Sharing off")
 
     let unknown = HostEntry(host: subtitleHost, status: .unknown, details: stale)
-    #expect(hostSubtitle(for: unknown, l10n: l10n) == "100.123.34.96 · Unknown")
+    #expect(hostSubtitle(for: unknown, l10n: l10n) == "100.64.10.1 · Unknown")
 }

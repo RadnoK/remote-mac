@@ -10,16 +10,16 @@ private func tailscaleHost(_ name: String, _ ip: String, id: String? = nil) -> H
     var settings = AppSettings.default
     settings.manualHosts = [ManualHost(name: "biuro", address: "192.168.1.50")]
 
-    let merged = mergeHosts(tailscale: [tailscaleHost("mini", "100.123.34.96")], settings: settings)
+    let merged = mergeHosts(tailscale: [tailscaleHost("mini", "100.64.10.1")], settings: settings)
     #expect(merged.count == 2)
     #expect(merged.contains { $0.name == "biuro" && $0.source == .manual })
 }
 
 @Test func manualHostDuplicatingTailscaleIPIsDropped() {
     var settings = AppSettings.default
-    settings.manualHosts = [ManualHost(name: "mini-recznie", address: "100.123.34.96")]
+    settings.manualHosts = [ManualHost(name: "mini-recznie", address: "100.64.10.1")]
 
-    let merged = mergeHosts(tailscale: [tailscaleHost("mini", "100.123.34.96")], settings: settings)
+    let merged = mergeHosts(tailscale: [tailscaleHost("mini", "100.64.10.1")], settings: settings)
     #expect(merged.count == 1)
     #expect(merged[0].source == .tailscale)
 }
@@ -29,7 +29,7 @@ private func tailscaleHost(_ name: String, _ ip: String, id: String? = nil) -> H
     settings.hiddenHostIDs = ["nodekey:mini"]
 
     let merged = mergeHosts(
-        tailscale: [tailscaleHost("mini", "100.123.34.96"), tailscaleHost("mbp", "100.108.216.101")],
+        tailscale: [tailscaleHost("mini", "100.64.10.1"), tailscaleHost("mbp", "100.64.10.2")],
         settings: settings
     )
     #expect(merged.map(\.name) == ["mbp"])
@@ -46,17 +46,17 @@ private func tailscaleHost(_ name: String, _ ip: String, id: String? = nil) -> H
 
 @Test func usernamesAreResolvedPerHost() {
     var settings = AppSettings.default
-    settings.defaultSSHUsername = "radnok"
+    settings.defaultSSHUsername = "alex"
     settings.sshUsernames = ["nodekey:mini": "admin"]
 
     let merged = mergeHosts(
-        tailscale: [tailscaleHost("mini", "100.123.34.96"), tailscaleHost("mbp", "100.108.216.101")],
+        tailscale: [tailscaleHost("mini", "100.64.10.1"), tailscaleHost("mbp", "100.64.10.2")],
         settings: settings
     )
     let mini = merged.first { $0.name == "mini" }
     let mbp = merged.first { $0.name == "mbp" }
     #expect(mini?.sshUsername == "admin")
-    #expect(mbp?.sshUsername == "radnok")
+    #expect(mbp?.sshUsername == "alex")
 }
 
 @Test func resultIsSortedByDisplayName() {
@@ -93,7 +93,7 @@ private func tailscaleHost(_ name: String, _ ip: String, id: String? = nil) -> H
     var settings = AppSettings.default
     settings.hiddenHostIDs = ["nodekey:mini"]
 
-    let merged = mergeHosts(tailscale: [tailscaleHost("mini", "100.123.34.96")], settings: settings)
+    let merged = mergeHosts(tailscale: [tailscaleHost("mini", "100.64.10.1")], settings: settings)
     #expect(merged.isEmpty)
 }
 
@@ -101,7 +101,7 @@ private func tailscaleHost(_ name: String, _ ip: String, id: String? = nil) -> H
     var settings = AppSettings.default
     settings.displayNameOverrides = ["nodekey:mini": "Living Room Mac"]
 
-    let merged = mergeHosts(tailscale: [tailscaleHost("mini", "100.123.34.96")], settings: settings)
+    let merged = mergeHosts(tailscale: [tailscaleHost("mini", "100.64.10.1")], settings: settings)
     #expect(merged[0].displayName == "Living Room Mac")
 }
 
@@ -112,7 +112,7 @@ private func tailscaleHost(_ name: String, _ ip: String, id: String? = nil) -> H
     var settings = AppSettings.default
     settings.displayNameOverrides = ["nodekey:mini": ""]
 
-    let merged = mergeHosts(tailscale: [tailscaleHost("mini", "100.123.34.96")], settings: settings)
+    let merged = mergeHosts(tailscale: [tailscaleHost("mini", "100.64.10.1")], settings: settings)
     #expect(merged[0].displayName == "mini")
 }
 
@@ -120,11 +120,11 @@ private func tailscaleHost(_ name: String, _ ip: String, id: String? = nil) -> H
     var settings = AppSettings.default
     settings.screenSharingPorts = ["nodekey:mini": 5901]
 
-    let merged = mergeHosts(tailscale: [tailscaleHost("mini", "100.123.34.96")], settings: settings)
+    let merged = mergeHosts(tailscale: [tailscaleHost("mini", "100.64.10.1")], settings: settings)
     #expect(merged[0].screenSharingPort == 5901)
 }
 
 @Test func hostWithoutAPortOverrideKeepsTheDefaultPort() {
-    let merged = mergeHosts(tailscale: [tailscaleHost("mini", "100.123.34.96")], settings: .default)
+    let merged = mergeHosts(tailscale: [tailscaleHost("mini", "100.64.10.1")], settings: .default)
     #expect(merged[0].screenSharingPort == RemoteMacCore.screenSharingPort)
 }

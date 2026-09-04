@@ -7,14 +7,14 @@ private let realisticJSON = """
 {
   "Version": "1.102.3-t9329c3677-ga522f65e9",
   "BackendState": "Running",
-  "TailscaleIPs": ["100.92.218.58"],
+  "TailscaleIPs": ["100.64.10.3"],
   "Self": {
     "ID": "self1",
     "PublicKey": "nodekey:aaa",
-    "HostName": "Konrad's MacBook",
-    "DNSName": "konrad-macbook-pro.tail1ee4df.ts.net.",
+    "HostName": "Alex's MacBook",
+    "DNSName": "alex-macbook-pro.tailnet-1234.ts.net.",
     "OS": "macOS",
-    "TailscaleIPs": ["100.92.218.58", "fd7a:115c:a1e0::1"],
+    "TailscaleIPs": ["100.64.10.3", "fd7a:115c:a1e0::1"],
     "Online": true,
     "LastSeen": "0001-01-01T00:00:00Z"
   },
@@ -22,18 +22,18 @@ private let realisticJSON = """
     "nodekey:bbb": {
       "ID": "peer1",
       "PublicKey": "nodekey:bbb",
-      "HostName": "Konrad’s Mac mini",
-      "DNSName": "konrads-mac-mini.tail1ee4df.ts.net.",
+      "HostName": "Alex’s Mac mini",
+      "DNSName": "studio-mac-mini.tailnet-1234.ts.net.",
       "OS": "macOS",
-      "TailscaleIPs": ["100.123.34.96", "fd7a:115c:a1e0::2"],
+      "TailscaleIPs": ["100.64.10.1", "fd7a:115c:a1e0::2"],
       "Online": true,
       "LastSeen": "0001-01-01T00:00:00Z"
     },
     "nodekey:ccc": {
       "ID": "peer2",
       "PublicKey": "nodekey:ccc",
-      "HostName": "8lines-dev",
-      "DNSName": "8lines-dev.tail1ee4df.ts.net.",
+      "HostName": "build-server",
+      "DNSName": "build-server.tailnet-1234.ts.net.",
       "OS": "linux",
       "TailscaleIPs": ["100.84.209.51"],
       "Online": true,
@@ -44,7 +44,7 @@ private let realisticJSON = """
       "ID": "peer3",
       "PublicKey": "nodekey:ddd",
       "HostName": "localhost",
-      "DNSName": "konrad-iphone.tail1ee4df.ts.net.",
+      "DNSName": "alex-iphone.tailnet-1234.ts.net.",
       "OS": "iOS",
       "TailscaleIPs": ["100.110.204.67"],
       "Online": true,
@@ -53,10 +53,10 @@ private let realisticJSON = """
     "nodekey:eee": {
       "ID": "peer4",
       "PublicKey": "nodekey:eee",
-      "HostName": "Konrad’s MacBook Pro",
-      "DNSName": "konrads-macbook-pro.tail1ee4df.ts.net.",
+      "HostName": "Alex’s MacBook Pro",
+      "DNSName": "studio-macbook-pro.tailnet-1234.ts.net.",
       "OS": "macOS",
-      "TailscaleIPs": ["100.108.216.101"],
+      "TailscaleIPs": ["100.64.10.2"],
       "Online": false,
       "LastSeen": "2026-01-21T21:02:00.1Z"
     }
@@ -74,7 +74,7 @@ private let realisticJSON = """
 @Test func usesDNSNameFirstSegmentAsName() throws {
     let hosts = try parseTailscaleStatus(Data(realisticJSON.utf8))
     let names = Set(hosts.map(\.name))
-    #expect(names == ["konrad-macbook-pro", "konrads-mac-mini", "konrads-macbook-pro"])
+    #expect(names == ["alex-macbook-pro", "studio-mac-mini", "studio-macbook-pro"])
 }
 
 @Test func stripsTrailingDotAndNeverKeepsFQDN() throws {
@@ -85,28 +85,28 @@ private let realisticJSON = """
 
 @Test func preservesCurlyApostropheInDisplayName() throws {
     let hosts = try parseTailscaleStatus(Data(realisticJSON.utf8))
-    let mini = try #require(hosts.first { $0.name == "konrads-mac-mini" })
-    #expect(mini.displayName == "Konrad\u{2019}s Mac mini")
+    let mini = try #require(hosts.first { $0.name == "studio-mac-mini" })
+    #expect(mini.displayName == "Alex\u{2019}s Mac mini")
 }
 
 @Test func picksIPv4FromTailscaleIPs() throws {
     let hosts = try parseTailscaleStatus(Data(realisticJSON.utf8))
-    let mini = try #require(hosts.first { $0.name == "konrads-mac-mini" })
-    #expect(mini.ipv4 == "100.123.34.96")
+    let mini = try #require(hosts.first { $0.name == "studio-mac-mini" })
+    #expect(mini.ipv4 == "100.64.10.1")
     #expect(hosts.allSatisfy { !$0.ipv4.contains(":") })
 }
 
 @Test func readsOnlineFlag() throws {
     let hosts = try parseTailscaleStatus(Data(realisticJSON.utf8))
-    let mbp = try #require(hosts.first { $0.name == "konrads-macbook-pro" })
+    let mbp = try #require(hosts.first { $0.name == "studio-macbook-pro" })
     #expect(mbp.isOnline == false)
-    let mini = try #require(hosts.first { $0.name == "konrads-mac-mini" })
+    let mini = try #require(hosts.first { $0.name == "studio-mac-mini" })
     #expect(mini.isOnline == true)
 }
 
 @Test func selfIsIncludedEvenThoughAbsentFromPeerDictionary() throws {
     let hosts = try parseTailscaleStatus(Data(realisticJSON.utf8))
-    #expect(hosts.contains { $0.name == "konrad-macbook-pro" })
+    #expect(hosts.contains { $0.name == "alex-macbook-pro" })
 }
 
 @Test func toleratesMissingTagsKey() throws {
@@ -150,7 +150,7 @@ private let realisticJSON = """
   "Self": {
     "PublicKey": "nodekey:test",
     "HostName": "The Tailscale GUI failed to start Server",
-    "DNSName": "weird-host.tail1ee4df.ts.net.",
+    "DNSName": "weird-host.tailnet-1234.ts.net.",
     "OS": "macOS",
     "TailscaleIPs": ["100.99.88.77"],
     "Online": true

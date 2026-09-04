@@ -20,7 +20,7 @@ public func searchHosts(_ hosts: [Host], query: String) -> [Host] {
 }
 
 /// Lowercases and folds the typographic apostrophe to a straight one, so a
-/// query typed with a plain quote matches "Konrad's Mac mini".
+/// query typed with a plain quote matches "Alex’s Mac mini".
 private func normalize(_ value: String) -> String {
     value
         .replacingOccurrences(of: "\u{2019}", with: "'")
@@ -29,7 +29,7 @@ private func normalize(_ value: String) -> String {
 
 /// Returns the number of characters spanned while matching `needle` as a
 /// subsequence of `haystack`, or nil when it does not match. Spaces in the
-/// needle are ignored so "konrad's mac mini" matches "konrads-mac-mini".
+/// needle are ignored so "alex's mac mini" matches "studio-mac-mini".
 private func matchSpan(needle: String, haystack: String) -> Int? {
     let target = Array(haystack)
     var index = 0

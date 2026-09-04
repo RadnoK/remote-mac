@@ -2,17 +2,17 @@ import Testing
 @testable import RemoteMacCore
 
 @Test func ghosttyPassesArgvWithoutShell() {
-    let plan = launchPlan(for: .ghostty, user: "radnok", host: "100.123.34.96", isRunning: false)
+    let plan = launchPlan(for: .ghostty, user: "alex", host: "100.64.10.1", isRunning: false)
     #expect(plan == .openWithArguments(
         bundleID: "com.mitchellh.ghostty",
-        arguments: ["-e", "ssh", "radnok@100.123.34.96"],
+        arguments: ["-e", "ssh", "alex@100.64.10.1"],
         newInstance: true
     ))
 }
 
 @Test func itermUsesEqualsFormOnly() {
     // The space-separated form silently does nothing; only --command=X works.
-    let plan = launchPlan(for: .iterm, user: "radnok", host: "100.123.34.96", isRunning: false)
+    let plan = launchPlan(for: .iterm, user: "alex", host: "100.64.10.1", isRunning: false)
     guard case let .openWithArguments(bundleID, arguments, _) = plan else {
         Issue.record("expected openWithArguments, got \(plan)")
         return
@@ -25,8 +25,8 @@ import Testing
 
 @Test func itermSkipsNewInstanceWhenAlreadyRunning() {
     // `open -na iTerm` spawns a second iTerm process every time.
-    let cold = launchPlan(for: .iterm, user: "radnok", host: "h", isRunning: false)
-    let warm = launchPlan(for: .iterm, user: "radnok", host: "h", isRunning: true)
+    let cold = launchPlan(for: .iterm, user: "alex", host: "h", isRunning: false)
+    let warm = launchPlan(for: .iterm, user: "alex", host: "h", isRunning: true)
     guard case let .openWithArguments(_, _, coldNew) = cold,
           case let .openWithArguments(_, _, warmNew) = warm else {
         Issue.record("expected openWithArguments")
@@ -55,7 +55,7 @@ import Testing
     ]
 
     for hostname in hostnames {
-        let plan = launchPlan(for: .iterm, user: "radnok", host: hostname, isRunning: false)
+        let plan = launchPlan(for: .iterm, user: "alex", host: hostname, isRunning: false)
         guard case let .openWithArguments(_, arguments, _) = plan else {
             Issue.record("expected openWithArguments for hostname \(hostname)")
             return
@@ -111,30 +111,30 @@ import Testing
     // Ghostty's `-e` takes an argv array, never a shell string. It must NOT
     // be quoted, so a hostile hostname passes through verbatim (safely, because
     // it's argv, not a command string).
-    let plan = launchPlan(for: .ghostty, user: "radnok", host: "h;x", isRunning: false)
+    let plan = launchPlan(for: .ghostty, user: "alex", host: "h;x", isRunning: false)
     guard case let .openWithArguments(_, arguments, _) = plan else {
         Issue.record("expected openWithArguments")
         return
     }
-    // Must be exactly ["-e", "ssh", "radnok@h;x"] - no quoting applied.
-    #expect(arguments == ["-e", "ssh", "radnok@h;x"])
+    // Must be exactly ["-e", "ssh", "alex@h;x"] - no quoting applied.
+    #expect(arguments == ["-e", "ssh", "alex@h;x"])
     // Specifically: no single quotes around the destination.
     #expect(!arguments[2].contains("'"))
 }
 
 @Test func ghosttyDoesNotEscapeBecauseArgvNeedsNoQuoting() {
     // Ghostty takes an argv array directly, so the raw value is correct there.
-    let plan = launchPlan(for: .ghostty, user: "radnok", host: "h;x", isRunning: false)
+    let plan = launchPlan(for: .ghostty, user: "alex", host: "h;x", isRunning: false)
     guard case let .openWithArguments(_, arguments, _) = plan else {
         Issue.record("expected openWithArguments")
         return
     }
     // The raw value survives untouched because argv needs no quoting.
-    #expect(arguments == ["-e", "ssh", "radnok@h;x"])
+    #expect(arguments == ["-e", "ssh", "alex@h;x"])
 }
 
 @Test func terminalUsesAppleScript() {
-    let plan = launchPlan(for: .terminal, user: "radnok", host: "100.123.34.96", isRunning: false)
+    let plan = launchPlan(for: .terminal, user: "alex", host: "100.64.10.1", isRunning: false)
     guard case let .appleScript(source, bundleID) = plan else {
         Issue.record("expected appleScript, got \(plan)")
         return
@@ -143,7 +143,7 @@ import Testing
     #expect(source.contains("do script"))
     // The ssh command must appear shell-quoted (single quotes) inside the
     // AppleScript do script string.
-    #expect(source.contains("'ssh radnok@100.123.34.96'"))
+    #expect(source.contains("'ssh alex@100.64.10.1'"))
 }
 
 @Test func terminalEscapesShellAndAppleScriptBoundaries() {
@@ -165,7 +165,7 @@ import Testing
     ]
 
     for hostname in hostnames {
-        let plan = launchPlan(for: .terminal, user: "radnok", host: hostname, isRunning: false)
+        let plan = launchPlan(for: .terminal, user: "alex", host: hostname, isRunning: false)
         guard case let .appleScript(source, _) = plan else {
             Issue.record("expected appleScript for hostname \(hostname)")
             return
@@ -189,8 +189,8 @@ import Testing
         #expect(!scriptArg.contains("\n"), "raw newline in do script for hostname \(hostname)")
 
         // The ssh command must appear as a single shell-quoted token.
-        // Format: 'ssh radnok@...' possibly with \'' for embedded apostrophes.
-        let expectedPrefix = "'ssh radnok@"
+        // Format: 'ssh alex@...' possibly with \'' for embedded apostrophes.
+        let expectedPrefix = "'ssh alex@"
         #expect(scriptArg.contains(expectedPrefix), "expected ssh command quoted, got \(scriptArg)")
 
         // Check that the token is properly closed with a single quote at some point.
@@ -201,15 +201,15 @@ import Testing
 
 @Test func warpOpensAndCopiesBecauseItRefusesToSubmitInput() {
     // Warp Control deliberately provides no action that submits input.
-    let plan = launchPlan(for: .warp, user: "radnok", host: "100.123.34.96", isRunning: false)
+    let plan = launchPlan(for: .warp, user: "alex", host: "100.64.10.1", isRunning: false)
     #expect(plan == .openAndCopyToClipboard(
         bundleID: "dev.warp.Warp-Stable",
-        clipboard: "ssh radnok@100.123.34.96"
+        clipboard: "ssh alex@100.64.10.1"
     ))
 }
 
 @Test func sshCommandLineJoinsUserAndHost() {
-    #expect(sshCommandLine(user: "radnok", host: "100.123.34.96") == "ssh radnok@100.123.34.96")
+    #expect(sshCommandLine(user: "alex", host: "100.64.10.1") == "ssh alex@100.64.10.1")
 }
 
 @Test func everyTerminalHasDistinctBundleIdentifier() {

@@ -24,7 +24,7 @@ private func makeTempURL() -> URL {
     let store = SettingsStore(fileURL: url)
     var settings = AppSettings.default
     settings.terminal = .iterm
-    settings.defaultSSHUsername = "radnok"
+    settings.defaultSSHUsername = "alex"
     settings.manualHosts = [ManualHost(name: "biuro", address: "192.168.1.50")]
     settings.hiddenHostIDs = ["nodekey:aaa"]
 
@@ -74,16 +74,16 @@ private func makeTempURL() -> URL {
 
 @Test func perHostUsernameOverridesDefault() {
     var settings = AppSettings.default
-    settings.defaultSSHUsername = "radnok"
+    settings.defaultSSHUsername = "alex"
     settings.sshUsernames = ["nodekey:bbb": "admin"]
 
     let overridden = Host(id: "nodekey:bbb", name: "mini", displayName: "mini",
-                          ipv4: "100.123.34.96", isOnline: true, source: .tailscale)
+                          ipv4: "100.64.10.1", isOnline: true, source: .tailscale)
     let plain = Host(id: "nodekey:ccc", name: "mbp", displayName: "mbp",
-                     ipv4: "100.108.216.101", isOnline: true, source: .tailscale)
+                     ipv4: "100.64.10.2", isOnline: true, source: .tailscale)
 
     #expect(settings.sshUsername(for: overridden) == "admin")
-    #expect(settings.sshUsername(for: plain) == "radnok")
+    #expect(settings.sshUsername(for: plain) == "alex")
 }
 
 /// An empty override is stored the same as no override at all — the
@@ -92,12 +92,12 @@ private func makeTempURL() -> URL {
 /// settings.json).
 @Test func emptyPerHostUsernameFallsBackToDefault() {
     var settings = AppSettings.default
-    settings.defaultSSHUsername = "radnok"
+    settings.defaultSSHUsername = "alex"
     settings.sshUsernames = ["nodekey:bbb": ""]
 
     let host = Host(id: "nodekey:bbb", name: "mini", displayName: "mini",
-                    ipv4: "100.123.34.96", isOnline: true, source: .tailscale)
-    #expect(settings.sshUsername(for: host) == "radnok")
+                    ipv4: "100.64.10.1", isOnline: true, source: .tailscale)
+    #expect(settings.sshUsername(for: host) == "alex")
 }
 
 @Test func defaultPathLivesUnderApplicationSupport() {
@@ -118,7 +118,7 @@ private func makeTempURL() -> URL {
     let json = """
     {
       "terminal": "ghostty",
-      "defaultSSHUsername": "radnok",
+      "defaultSSHUsername": "alex",
       "sshUsernames": {"nodekey:aaa": "admin"},
       "manualHosts": [{"name": "biuro", "address": "192.168.1.50"}],
       "hiddenHostIDs": []
@@ -128,7 +128,7 @@ private func makeTempURL() -> URL {
 
     let store = SettingsStore(fileURL: url)
     let loaded = store.load()
-    #expect(loaded.defaultSSHUsername == "radnok")
+    #expect(loaded.defaultSSHUsername == "alex")
     #expect(loaded.sshUsernames == ["nodekey:aaa": "admin"])
     #expect(loaded.displayNameOverrides.isEmpty)
     #expect(loaded.screenSharingPorts.isEmpty)
