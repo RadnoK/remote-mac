@@ -140,3 +140,36 @@ private let realisticJSON = """
     let hosts = try parseTailscaleStatus(Data(realisticJSON.utf8))
     #expect(hosts.map(\.displayName) == hosts.map(\.displayName).sorted())
 }
+
+@Test func allowsHostnameContainingGUIErrorString() throws {
+    // Valid JSON with a hostname containing the GUI-error substring should parse normally,
+    // not be misclassified as a GUI launch failure.
+    let json = #"""
+{
+  "BackendState": "Running",
+  "Self": {
+    "PublicKey": "nodekey:test",
+    "HostName": "The Tailscale GUI failed to start Server",
+    "DNSName": "weird-host.tail1ee4df.ts.net.",
+    "OS": "macOS",
+    "TailscaleIPs": ["100.99.88.77"],
+    "Online": true
+  },
+  "Peer": null
+}
+"""#
+    let hosts = try parseTailscaleStatus(Data(json.utf8))
+    #expect(hosts.count == 1)
+    let host = try #require(hosts.first)
+    #expect(host.displayName == "The Tailscale GUI failed to start Server")
+    #expect(host.ipv4 == "100.99.88.77")
+}
+
+@Test func absentBackendStateIsMalformed() {
+    // A payload missing the BackendState key entirely should throw .malformed,
+    // not proceed as though the backend were Running.
+    let json = #"{"Self":null,"Peer":null}"#
+    #expect(throws: TailscaleParseError.malformed) {
+        try parseTailscaleStatus(Data(json.utf8))
+    }
+}

@@ -34,20 +34,25 @@ private let macOSIdentifier = "macOS"
 public func parseTailscaleStatus(_ data: Data) throws -> [Host] {
     guard !data.isEmpty else { throw TailscaleParseError.malformed }
 
-    // The CLI writes this error to stdout AND exits 0, so the output stream is
-    // the only place it can be detected.
-    if let text = String(data: data, encoding: .utf8),
-       text.contains("The Tailscale GUI failed to start") {
-        throw TailscaleParseError.guiLaunchFailure
-    }
-
-    guard let payload = try? JSONDecoder().decode(StatusPayload.self, from: data) else {
+    // Attempt to decode the payload first. Only if decoding fails should we
+    // fall back to checking if the CLI tried to launch the GUI (which emits
+    // plain text, not JSON, and exits 0).
+    let payload: StatusPayload
+    if let decoded = try? JSONDecoder().decode(StatusPayload.self, from: data) {
+        payload = decoded
+    } else {
+        // The CLI writes this error to stdout AND exits 0, so the output stream is
+        // the only place it can be detected.
+        if let text = String(data: data, encoding: .utf8),
+           text.contains("The Tailscale GUI failed to start") {
+            throw TailscaleParseError.guiLaunchFailure
+        }
         throw TailscaleParseError.malformed
     }
 
-    if let state = payload.BackendState, state != "Running" {
-        throw TailscaleParseError.notRunning(state)
-    }
+    // BackendState must be present and "Running". Absent key means unparseable state.
+    guard let state = payload.BackendState else { throw TailscaleParseError.malformed }
+    guard state == "Running" else { throw TailscaleParseError.notRunning(state) }
 
     let nodes = [payload.`Self`].compactMap(\.self) + (payload.Peer?.values.map(\.self) ?? [])
 
