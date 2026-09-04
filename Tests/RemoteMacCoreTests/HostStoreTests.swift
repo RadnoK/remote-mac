@@ -614,3 +614,20 @@ private let subtitleHost = Host(id: "1", name: "mini", displayName: "Mac mini",
         details: HostDetails(consoleUser: nil, isScreenLocked: true))
     #expect(hostSubtitle(for: entry) == "100.123.34.96 · zablokowany")
 }
+
+/// Details are carried forward across refreshes to stop enriched rows from
+/// flickering. That carry-forward must not survive the host going away: a
+/// sleeping Mac showing "radnok · zablokowany" would hide the very fact the
+/// user opened the menu to learn.
+@Test func subtitleFallsBackToStatusWhenHostIsNoLongerReachable() {
+    let stale = HostDetails(consoleUser: "radnok", isScreenLocked: true)
+
+    let offline = HostEntry(host: subtitleHost, status: .offline, details: stale)
+    #expect(hostSubtitle(for: offline) == "100.123.34.96 · Offline")
+
+    let sharingOff = HostEntry(host: subtitleHost, status: .screenSharingOff, details: stale)
+    #expect(hostSubtitle(for: sharingOff) == "100.123.34.96 · Screen Sharing wyłączony")
+
+    let unknown = HostEntry(host: subtitleHost, status: .unknown, details: stale)
+    #expect(hostSubtitle(for: unknown) == "100.123.34.96 · Nieznany")
+}

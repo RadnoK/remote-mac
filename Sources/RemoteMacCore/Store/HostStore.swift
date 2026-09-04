@@ -24,7 +24,13 @@ public struct HostEntry: Sendable, Identifiable, Equatable {
 /// point of enrichment. So: no details → IP + status; details present → IP +
 /// console user (if any) + lock indicator (if locked), status dropped.
 public func hostSubtitle(for entry: HostEntry) -> String {
-    guard let details = entry.details else {
+    // Details are carried forward across refreshes so an enriched row does not
+    // flicker while the next SSH round-trip is in flight. That carry-forward
+    // must not outlive reachability: a Mac that has gone to sleep would
+    // otherwise keep showing who was logged in, hiding the one fact the user
+    // opened the menu to learn. Show details only while the host is still
+    // reachable; otherwise fall back to the status label.
+    guard entry.status.isConnectable, let details = entry.details else {
         return [entry.host.ipv4, entry.status.label].joined(separator: " · ")
     }
     var parts = [entry.host.ipv4]
