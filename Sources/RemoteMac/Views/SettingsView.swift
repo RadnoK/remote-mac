@@ -11,6 +11,7 @@ import SwiftUI
 /// type only composes them. Ported from RouterMenu's `SettingsView`.
 struct SettingsView: View {
     @Bindable var store: HostStore
+    @Bindable var updater: UpdaterController
 
     var body: some View {
         TabView {
@@ -36,6 +37,8 @@ struct SettingsView: View {
             MachinesSettingsTab(store: store)
         case .about:
             AboutSettingsTab(l10n: store.l10n)
+        case .updates:
+            UpdatesSettingsTab(store: store, updater: updater)
         }
     }
 }

@@ -5,6 +5,7 @@ import RemoteMacCore
 enum SettingsTab: String, CaseIterable, Identifiable {
     case general
     case machines
+    case updates
     case about
 
     var id: String { rawValue }
@@ -15,6 +16,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general:  return "gearshape"
         case .machines: return "display.2"
         case .about:    return "info.circle"
+        case .updates:  return "arrow.triangle.2.circlepath"
         }
     }
 
@@ -23,6 +25,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general:  return .settingsTabGeneral
         case .machines: return .settingsTabHosts
         case .about:    return .settingsTabAbout
+        case .updates:  return .settingsTabUpdates
         }
     }
 }

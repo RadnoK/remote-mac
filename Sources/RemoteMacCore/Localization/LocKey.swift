@@ -22,6 +22,7 @@ public enum LocKey: String, CaseIterable, Sendable {
     case menuQuickConnect = "menu.quick_connect"
     case menuRefresh = "menu.refresh"
     case menuSettings = "menu.settings"
+    case menuCheckForUpdates = "menu.check_for_updates"
     case menuQuit = "menu.quit"
 
     // Menu — quick switcher
@@ -50,6 +51,7 @@ public enum LocKey: String, CaseIterable, Sendable {
     case settingsTabGeneral = "settings.tab.general"
     case settingsTabHosts = "settings.tab.hosts"
     case settingsTabAbout = "settings.tab.about"
+    case settingsTabUpdates = "settings.tab.updates"
 
     // Settings — general
     case settingsGeneralSection = "settings.general.section"
@@ -84,6 +86,19 @@ public enum LocKey: String, CaseIterable, Sendable {
     case settingsAboutWebsite = "settings.about.website"
     case settingsAboutContact = "settings.about.contact"
     case settingsAboutSendEmail = "settings.about.send_email"
+
+    // Settings — updates
+    case settingsUpdatesSection = "settings.updates.section"
+    case settingsBuild = "settings.updates.build"
+    case settingsAutoCheck = "settings.updates.auto_check"
+    case settingsFrequency = "settings.updates.frequency"
+    case settingsFrequencyDaily = "settings.updates.frequency_daily"
+    case settingsFrequencyWeekly = "settings.updates.frequency_weekly"
+    case settingsAutoDownload = "settings.updates.auto_download"
+    case settingsCheckNow = "settings.updates.check_now"
+    case settingsNeverChecked = "settings.updates.never_checked"
+    /// Takes one argument: a relative time string, e.g. "2 hours ago".
+    case settingsLastChecked = "settings.updates.last_checked"
 
     // Errors
     case errorHostListFailed = "error.host_list_failed"

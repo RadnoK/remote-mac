@@ -6,6 +6,14 @@ struct RemoteMacApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var store = HostStore()
 
+    init() {
+        // `@NSApplicationDelegateAdaptor` builds `appDelegate` before this
+        // initializer's own `@State` is available to read, so the store
+        // reference the delegate needs for its right-click menu has to be
+        // handed over here rather than at the delegate's own init.
+        appDelegate.store = store
+    }
+
     var body: some Scene {
         MenuBarExtra("RemoteMac", systemImage: "display.2") {
             MenuView(store: store)
@@ -25,7 +33,7 @@ struct RemoteMacApp: App {
         .menuBarExtraStyle(.window)
 
         Settings {
-            SettingsView(store: store)
+            SettingsView(store: store, updater: appDelegate.updater)
         }
 
         // The title is a literal, not `store.l10n(...)`: reading observable

@@ -23,6 +23,16 @@ enum SettingsWindowOpener {
         // this the window opens behind the frontmost app.
         NSApplication.shared.activate(ignoringOtherApps: true)
 
+        // Ask AppKit directly first. Driving the "Settings…" menu item found
+        // the item but opened nothing in this app, so the menu route below is
+        // only a fallback. Views should prefer SwiftUI's `openSettings()`
+        // environment action — this type exists for callers like AppDelegate
+        // that have no SwiftUI environment to read.
+        for name in ["showSettingsWindow:", "showPreferencesWindow:"] {
+            let selector = NSSelectorFromString(name)
+            if NSApplication.shared.sendAction(selector, to: nil, from: nil) { return }
+        }
+
         if performSettingsItem() { return }
 
         // SwiftUI populates `mainMenu` lazily, and for an LSUIElement app it

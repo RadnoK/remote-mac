@@ -16,6 +16,7 @@
 "menu.quick_connect" = "Quick Connect…";
 "menu.refresh" = "Refresh";
 "menu.settings" = "Settings…";
+"menu.check_for_updates" = "Check for Updates…";
 "menu.quit" = "Quit";
 
 /* Menu — quick switcher */
@@ -44,6 +45,7 @@
 "settings.tab.general" = "General";
 "settings.tab.hosts" = "Machines";
 "settings.tab.about" = "About";
+"settings.tab.updates" = "Updates";
 
 /* Settings — general */
 "settings.general.section" = "Terminal";
@@ -78,6 +80,18 @@
 "settings.about.website" = "Website";
 "settings.about.contact" = "Contact";
 "settings.about.send_email" = "Send Email";
+
+/* Settings — updates */
+"settings.updates.section" = "Updates";
+"settings.updates.build" = "Build";
+"settings.updates.auto_check" = "Check automatically";
+"settings.updates.frequency" = "Frequency";
+"settings.updates.frequency_daily" = "Daily";
+"settings.updates.frequency_weekly" = "Weekly";
+"settings.updates.auto_download" = "Download and install automatically";
+"settings.updates.check_now" = "Check Now";
+"settings.updates.never_checked" = "Never checked";
+"settings.updates.last_checked" = "Checked %@";
 
 /* Errors */
 "error.host_list_failed" = "Could not read the list of machines.";

@@ -33,5 +33,13 @@
     <true/>
     <key>NSAppleEventsUsageDescription</key>
     <string>RemoteMac otwiera sesje SSH w wybranym przez Ciebie terminalu.</string>
+    <key>SUEnableAutomaticChecks</key>
+    <true/>
+    <!-- PLACEHOLDER: does not point at a real appcast yet. See Scripts/build-app.sh
+         and the phase2-sparkle-report.md for what must happen before shipping. -->
+    <key>SUFeedURL</key>
+    <string>https://github.com/radnok/remote-mac/releases/latest/download/appcast.xml</string>
+    <key>SUScheduledCheckInterval</key>
+    <integer>86400</integer>
 </dict>
 </plist>

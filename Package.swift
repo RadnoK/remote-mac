@@ -6,6 +6,7 @@ let package = Package(
     platforms: [.macOS(.v15)],
     dependencies: [
         .package(url: "https://github.com/swiftlang/swift-subprocess", from: "1.0.0"),
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.9.6"),
     ],
     targets: [
         .target(
@@ -17,7 +18,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "RemoteMac",
-            dependencies: ["RemoteMacCore"],
+            dependencies: [
+                "RemoteMacCore",
+                .product(name: "Sparkle", package: "Sparkle"),
+            ],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .testTarget(

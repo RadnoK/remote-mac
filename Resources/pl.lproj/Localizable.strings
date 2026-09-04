@@ -16,6 +16,7 @@
 "menu.quick_connect" = "Szybkie połączenie…";
 "menu.refresh" = "Odśwież";
 "menu.settings" = "Ustawienia…";
+"menu.check_for_updates" = "Sprawdź aktualizacje…";
 "menu.quit" = "Zakończ";
 
 /* Menu — szybkie połączenie */
@@ -44,6 +45,7 @@
 "settings.tab.general" = "Ogólne";
 "settings.tab.hosts" = "Maszyny";
 "settings.tab.about" = "O aplikacji";
+"settings.tab.updates" = "Aktualizacje";
 
 /* Ustawienia — ogólne */
 "settings.general.section" = "Terminal";
@@ -78,6 +80,18 @@
 "settings.about.website" = "Strona internetowa";
 "settings.about.contact" = "Kontakt";
 "settings.about.send_email" = "Wyślij e-mail";
+
+/* Ustawienia — aktualizacje */
+"settings.updates.section" = "Aktualizacje";
+"settings.updates.build" = "Kompilacja";
+"settings.updates.auto_check" = "Sprawdzaj automatycznie";
+"settings.updates.frequency" = "Częstotliwość";
+"settings.updates.frequency_daily" = "Codziennie";
+"settings.updates.frequency_weekly" = "Co tydzień";
+"settings.updates.auto_download" = "Pobieraj i instaluj automatycznie";
+"settings.updates.check_now" = "Sprawdź teraz";
+"settings.updates.never_checked" = "Nie sprawdzano";
+"settings.updates.last_checked" = "Sprawdzono %@";
 
 /* Błędy */
 "error.host_list_failed" = "Nie udało się odczytać listy maszyn.";
