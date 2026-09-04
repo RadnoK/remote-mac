@@ -9,6 +9,14 @@ public func mergeHosts(tailscale: [Host], settings: AppSettings) -> [Host] {
     let tailscaleIPs = Set(tailscale.map(\.ipv4))
 
     let manual = settings.manualHosts
+        // A manual entry with no address is a half-finished draft: the
+        // settings pane's "+" button creates an empty row for the user to
+        // fill in, and that row is persisted as they type. Until it has an
+        // address there is nothing to probe or connect to, so showing it in
+        // the menu just adds a permanently-red phantom machine. Skip it here
+        // rather than in the pane, so a hand-edited settings.json cannot
+        // reintroduce it either.
+        .filter { !$0.address.trimmingCharacters(in: .whitespaces).isEmpty }
         .filter { !tailscaleIPs.contains($0.address) }
         .map { entry in
             Host(

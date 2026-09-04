@@ -70,3 +70,18 @@ private func tailscaleHost(_ name: String, _ ip: String, id: String? = nil) -> H
 @Test func emptyInputsProduceEmptyList() {
     #expect(mergeHosts(tailscale: [], settings: .default).isEmpty)
 }
+
+/// The settings pane's "+" button creates an empty row for the user to fill
+/// in, and it is persisted as they type. Until it has an address there is
+/// nothing to probe, so it must not reach the menu as a phantom machine.
+@Test func manualHostWithoutAnAddressIsNotListed() {
+    var settings = AppSettings.default
+    settings.manualHosts = [
+        ManualHost(name: "Name", address: ""),
+        ManualHost(name: "blank", address: "   "),
+        ManualHost(name: "real", address: "192.168.1.50"),
+    ]
+
+    let merged = mergeHosts(tailscale: [], settings: settings)
+    #expect(merged.map(\.name) == ["real"])
+}
