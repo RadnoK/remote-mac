@@ -37,7 +37,7 @@ struct MenuView: View {
             }
 
             if store.entries.isEmpty {
-                Text("Brak maszyn")
+                Text(store.l10n(.menuNoHosts))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
@@ -49,27 +49,27 @@ struct MenuView: View {
 
             Divider().padding(.vertical, 4)
 
-            Button("Szybkie połączenie…") {
+            Button(store.l10n(.menuQuickConnect)) {
                 NSApp.activate()
                 openWindow(id: "quick-switcher")
             }
             .buttonStyle(.borderless)
             .padding(.horizontal, 10)
 
-            Button("Odśwież") {
+            Button(store.l10n(.menuRefresh)) {
                 Task { await store.refresh() }
             }
             .buttonStyle(.borderless)
             .padding(.horizontal, 10)
 
-            Button("Ustawienia…") {
+            Button(store.l10n(.menuSettings)) {
                 NSApp.activate()
                 openSettings()
             }
             .buttonStyle(.borderless)
             .padding(.horizontal, 10)
 
-            Button("Zakończ") { NSApplication.shared.terminate(nil) }
+            Button(store.l10n(.menuQuit)) { NSApplication.shared.terminate(nil) }
                 .buttonStyle(.borderless)
                 .padding(.horizontal, 10)
                 .padding(.bottom, 6)

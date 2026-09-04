@@ -8,12 +8,12 @@ struct HostRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            StatusDot(status: entry.status)
+            StatusDot(status: entry.status, l10n: store.l10n)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(entry.host.displayName)
                     .lineLimit(1)
-                Text(hostSubtitle(for: entry))
+                Text(hostSubtitle(for: entry, l10n: store.l10n))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -28,7 +28,7 @@ struct HostRow: View {
                     Image(systemName: "terminal")
                 }
                 .buttonStyle(.borderless)
-                .help("Otwórz SSH")
+                .help(store.l10n(.rowOpenSSH))
             }
         }
         .padding(.horizontal, 10)
@@ -39,11 +39,11 @@ struct HostRow: View {
         .onHover { isHovered = $0 }
         .onTapGesture { store.connect(to: entry.host) }
         .contextMenu {
-            Button("Połącz (Screen Sharing)") { store.connect(to: entry.host) }
-            Button("Otwórz SSH") { store.openSSH(to: entry.host) }
-            Button("Otwórz pliki (SMB)") { store.openFiles(for: entry.host) }
+            Button(store.l10n(.rowConnect)) { store.connect(to: entry.host) }
+            Button(store.l10n(.rowOpenSSH)) { store.openSSH(to: entry.host) }
+            Button(store.l10n(.rowOpenFiles)) { store.openFiles(for: entry.host) }
             Divider()
-            Button("Kopiuj adres IP") { store.copyAddress(of: entry.host) }
+            Button(store.l10n(.rowCopyAddress)) { store.copyAddress(of: entry.host) }
         }
     }
 }

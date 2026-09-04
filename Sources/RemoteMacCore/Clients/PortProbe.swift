@@ -115,7 +115,7 @@ public struct NetworkPortProbe: PortProbing, Sendable {
 /// host every 30 seconds over Tailscale; interface renegotiation, a Wi-Fi/
 /// Ethernet switch, sleep/wake, or a VPN reconnect all surface as exactly
 /// these errors on a perfectly healthy Mac. `.refused` renders to the user
-/// as "Screen Sharing wyłączony" — a specific, confident claim about the
+/// as "Screen Sharing off" — a specific, confident claim about the
 /// remote machine's configuration. An unrecognized error means we failed to
 /// reach the host; it tells us nothing about whether Screen Sharing is
 /// enabled there, so the honest, conservative outcome is `.timedOut`

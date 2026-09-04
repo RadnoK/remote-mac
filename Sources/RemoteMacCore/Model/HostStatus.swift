@@ -20,13 +20,14 @@ public enum HostStatus: Sendable, Equatable {
     case screenSharingOff
     case notFound
 
-    public var label: String {
+    @MainActor
+    public func label(_ l10n: L10n) -> String {
         switch self {
-        case .unknown:          "Nieznany"
-        case .offline:          "Offline"
-        case .online:           "Screen Sharing nasłuchuje"
-        case .screenSharingOff: "Screen Sharing wyłączony"
-        case .notFound:         "Nie znaleziono hosta"
+        case .unknown:          l10n(.statusUnknown)
+        case .offline:          l10n(.statusOffline)
+        case .online:           l10n(.statusOnline)
+        case .screenSharingOff: l10n(.statusScreenSharingOff)
+        case .notFound:         l10n(.statusNotFound)
         }
     }
 

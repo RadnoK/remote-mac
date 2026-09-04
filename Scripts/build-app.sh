@@ -13,11 +13,20 @@ cp ".build/release/RemoteMac" "$APP/Contents/MacOS/RemoteMac"
 cp "Resources/Info.plist" "$APP/Contents/Info.plist"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 
+echo "==> Localizations (en, pl)"
+for LPROJ in Resources/*.lproj; do
+  cp -R "$LPROJ" "$APP/Contents/Resources/"
+done
+
+echo "==> App icon"
+"$ROOT/Scripts/make-icon.sh" >/dev/null
+cp "$ROOT/dist/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
+
 CERT_SHA=$(security find-identity -v -p codesigning \
   | awk '/Developer ID Application.*7S3F9767BM/{print $2; exit}')
 
 if [ -z "$CERT_SHA" ]; then
-  echo "BŁĄD: nie znaleziono certyfikatu Developer ID (Team 7S3F9767BM)." >&2
+  echo "ERROR: Developer ID certificate not found (Team 7S3F9767BM)." >&2
   exit 1
 fi
 
@@ -27,4 +36,4 @@ codesign --force --options runtime \
   "$APP"
 
 codesign --verify --strict "$APP"
-echo "Zbudowano i podpisano: $APP"
+echo "Built and signed: $APP"

@@ -16,7 +16,7 @@ struct QuickSwitcher: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            TextField("Szukaj maszyny…", text: $query)
+            TextField(store.l10n(.menuQuickSwitcherSearch), text: $query)
                 .textFieldStyle(.plain)
                 .font(.title2)
                 .padding(12)
@@ -27,7 +27,7 @@ struct QuickSwitcher: View {
 
             List(Array(results.enumerated()), id: \.element.id) { index, entry in
                 HStack(spacing: 8) {
-                    StatusDot(status: entry.status)
+                    StatusDot(status: entry.status, l10n: store.l10n)
                     Text(entry.host.displayName)
                     Spacer()
                     Text(entry.host.ipv4).foregroundStyle(.secondary).font(.caption)

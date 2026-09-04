@@ -27,7 +27,7 @@ struct RemoteMacApp: App {
             SettingsView(store: store)
         }
 
-        Window("Szybkie połączenie", id: "quick-switcher") {
+        Window(store.l10n(.menuQuickSwitcherTitle), id: "quick-switcher") {
             QuickSwitcher(store: store)
         }
         .windowResizability(.contentSize)

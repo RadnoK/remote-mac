@@ -45,9 +45,17 @@ import Testing
     #expect(!HostStatus.notFound.isConnectable)
 }
 
-@Test func everyStatusHasNonEmptyPolishLabel() {
+@MainActor
+@Test func everyStatusHasNonEmptyLabelInEveryLanguage() throws {
     let all: [HostStatus] = [.unknown, .offline, .online, .screenSharingOff, .notFound]
-    #expect(all.allSatisfy { !$0.label.isEmpty })
+    let bundle = try resourcesBundle()
+    for language: AppLanguage in [.en, .pl] {
+        let l10n = L10n(language: language, bundles: [bundle])
+        #expect(all.allSatisfy { !$0.label(l10n).isEmpty })
+    }
     // Open port proves the service listens, not that login will succeed.
-    #expect(HostStatus.online.label.contains("nasłuchuje"))
+    let en = L10n(language: .en, bundles: [bundle])
+    #expect(HostStatus.online.label(en).contains("listening"))
+    let pl = L10n(language: .pl, bundles: [bundle])
+    #expect(HostStatus.online.label(pl).contains("nasłuchuje"))
 }

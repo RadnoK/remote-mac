@@ -1,0 +1,65 @@
+/* Menu — tytuły okien */
+"menu.quick_switcher_title" = "Szybkie połączenie";
+
+/* Menu — stany */
+"menu.no_hosts" = "Brak maszyn";
+
+/* Menu — akcje */
+"menu.quick_connect" = "Szybkie połączenie…";
+"menu.refresh" = "Odśwież";
+"menu.settings" = "Ustawienia…";
+"menu.quit" = "Zakończ";
+
+/* Menu — szybkie połączenie */
+"menu.quick_switcher_search" = "Szukaj maszyny…";
+
+/* Akcje wiersza */
+"row.connect" = "Połącz (Screen Sharing)";
+"row.open_ssh" = "Otwórz SSH";
+"row.open_files" = "Otwórz pliki (SMB)";
+"row.copy_address" = "Kopiuj adres IP";
+
+/* Etykiety statusu */
+"status.unknown" = "Nieznany";
+"status.offline" = "Offline";
+"status.online" = "Screen Sharing nasłuchuje";
+"status.screen_sharing_off" = "Screen Sharing wyłączony";
+"status.not_found" = "Nie znaleziono hosta";
+
+/* Etykiety stanu elementu logowania */
+"login_item.enabled" = "Włączone";
+"login_item.disabled" = "Wyłączone";
+"login_item.requires_approval" = "Wymaga zgody w Ustawieniach systemowych";
+"login_item.unavailable" = "Niedostępne (aplikacja nie jest podpisana)";
+
+/* Ustawienia — zakładki */
+"settings.tab.general" = "Ogólne";
+"settings.tab.hosts" = "Maszyny";
+
+/* Ustawienia — ogólne */
+"settings.general.terminal_field" = "Terminal:";
+"settings.general.ssh_username_field" = "Użytkownik SSH:";
+"settings.general.launch_at_login" = "Uruchamiaj przy logowaniu";
+"settings.general.open_system_settings" = "Otwórz Ustawienia systemowe";
+"settings.general.warp_clipboard_hint" = "Warp nie pozwala uruchomić komendy automatycznie. Komenda trafi do schowka — wklej ją przez ⌘V.";
+"settings.general.terminal_automation_hint" = "Terminal wymaga zgody na automatyzację. macOS zapyta o nią przy pierwszym użyciu.";
+"settings.general.launch_at_login_error" = "Nie udało się zmienić ustawienia uruchamiania przy logowaniu. Ta funkcja wymaga podpisanej wersji aplikacji — jeśli używasz wersji deweloperskiej lub cofnięto zgodę w Ustawieniach systemowych, przełącznik nie zadziała.";
+
+/* Ustawienia — maszyny */
+"settings.hosts.manual_header" = "Ręcznie dodane maszyny";
+"settings.hosts.name_field" = "Nazwa";
+"settings.hosts.address_field" = "Adres IP";
+"settings.hosts.add" = "Dodaj";
+
+/* Błędy */
+"error.host_list_failed" = "Nie udało się odczytać listy maszyn.";
+"error.tailscale_not_found" = "Nie znaleziono Tailscale. Zainstaluj Tailscale i upewnij się, że jest uruchomiony.";
+"error.tailscale_not_responding" = "Tailscale nie odpowiada.";
+"error.tailscale_cli_unavailable" = "Tailscale nie odpowiada (tryb CLI niedostępny).";
+"error.tailscale_disconnected" = "Tailscale rozłączony (%@).";
+"error.settings_save_failed" = "Nie udało się zapisać ustawień.";
+"error.launch_failed" = "Nie udało się uruchomić %@.";
+"error.launch_failed_automation" = "Nie udało się uruchomić %@. Sprawdź uprawnienia automatyzacji w Ustawieniach systemowych → Prywatność i bezpieczeństwo → Automatyzacja.";
+
+/* Podtytuł */
+"subtitle.locked" = "zablokowany";

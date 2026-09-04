@@ -9,8 +9,8 @@ struct SettingsView: View {
 
     var body: some View {
         TabView {
-            general.tabItem { Label("Ogólne", systemImage: "gearshape") }
-            hosts.tabItem { Label("Maszyny", systemImage: "display.2") }
+            general.tabItem { Label(store.l10n(.settingsTabGeneral), systemImage: "gearshape") }
+            hosts.tabItem { Label(store.l10n(.settingsTabHosts), systemImage: "display.2") }
         }
         .frame(width: 460, height: 340)
     }
@@ -23,42 +23,36 @@ struct SettingsView: View {
                     .foregroundStyle(.orange)
             }
 
-            Picker("Terminal:", selection: $store.settings.terminal) {
+            Picker(store.l10n(.settingsTerminalField), selection: $store.settings.terminal) {
                 ForEach(store.availableTerminals(), id: \.self) { terminal in
                     Text(terminal.displayName).tag(terminal)
                 }
             }
 
             if store.settings.terminal == .warp {
-                Text("Warp nie pozwala uruchomić komendy automatycznie. "
-                     + "Komenda trafi do schowka — wklej ją przez ⌘V.")
+                Text(store.l10n(.settingsWarpClipboardHint))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             if store.settings.terminal.requiresAppleEvents {
-                Text("Terminal wymaga zgody na automatyzację. "
-                     + "macOS zapyta o nią przy pierwszym użyciu.")
+                Text(store.l10n(.settingsTerminalAutomationHint))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            TextField("Użytkownik SSH:", text: $store.settings.defaultSSHUsername)
+            TextField(store.l10n(.settingsSSHUsernameField), text: $store.settings.defaultSSHUsername)
 
             Divider()
 
-            Toggle("Uruchamiaj przy logowaniu", isOn: Binding(
+            Toggle(store.l10n(.settingsLaunchAtLogin), isOn: Binding(
                 get: { loginState == .enabled },
                 set: { enabled in
                     do {
                         try LoginItem.setEnabled(enabled)
                         store.reportSettingsError(nil)
                     } catch {
-                        store.reportSettingsError(
-                            "Nie udało się zmienić ustawienia uruchamiania przy logowaniu. "
-                            + "Ta funkcja wymaga podpisanej wersji aplikacji — jeśli używasz "
-                            + "wersji deweloperskiej lub cofnięto zgodę w Ustawieniach "
-                            + "systemowych, przełącznik nie zadziała.")
+                        store.reportSettingsError(store.l10n(.settingsLaunchAtLoginError))
                     }
                     loginState = LoginItem.current
                 }
@@ -66,10 +60,10 @@ struct SettingsView: View {
             .disabled(loginState == .unavailable)
 
             if loginState == .requiresApproval {
-                Button("Otwórz Ustawienia systemowe") { LoginItem.openSystemSettings() }
+                Button(store.l10n(.settingsOpenSystemSettings)) { LoginItem.openSystemSettings() }
             }
             if loginState == .unavailable {
-                Text(loginState.label).font(.caption).foregroundStyle(.secondary)
+                Text(loginState.label(store.l10n)).font(.caption).foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
@@ -78,7 +72,7 @@ struct SettingsView: View {
 
     private var hosts: some View {
         VStack(alignment: .leading) {
-            Text("Ręcznie dodane maszyny")
+            Text(store.l10n(.settingsManualHostsHeader))
                 .font(.headline)
 
             List {
@@ -98,9 +92,9 @@ struct SettingsView: View {
             }
 
             HStack {
-                TextField("Nazwa", text: $newHostName)
-                TextField("Adres IP", text: $newHostAddress)
-                Button("Dodaj") {
+                TextField(store.l10n(.settingsHostNameField), text: $newHostName)
+                TextField(store.l10n(.settingsHostAddressField), text: $newHostAddress)
+                Button(store.l10n(.settingsHostAdd)) {
                     guard let host = sanitizedManualHost(name: newHostName, address: newHostAddress)
                     else { return }
                     store.settings.manualHosts.append(host)

@@ -582,52 +582,63 @@ private let subtitleHost = Host(id: "1", name: "mini", displayName: "Mac mini",
                                 ipv4: "100.123.34.96", isOnline: true,
                                 source: .tailscale, sshUsername: "radnok")
 
+@MainActor
+private func makeTestL10n() throws -> L10n {
+    L10n(language: .en, bundles: [try resourcesBundle()])
+}
+
 /// Enrichment only ever runs for `.online` hosts, whose status label is
-/// always the longest one ("Screen Sharing nasłuchuje" — ~25 characters on
+/// always the longest one ("Screen Sharing listening" — ~25 characters on
 /// its own). With `.lineLimit(1)` in a ~280pt-wide menu row, keeping that
 /// label once `details` are known would push the lock indicator — the whole
 /// point of enrichment — off the visible line. `hostSubtitle` drops the
 /// status label once `details` are present instead, since the status dot
 /// already encodes it and, at that point, it is always "online" anyway.
-@Test func subtitleShowsIPAndStatusWhenNoDetails() {
+@MainActor
+@Test func subtitleShowsIPAndStatusWhenNoDetails() throws {
     let entry = HostEntry(host: subtitleHost, status: .online)
-    #expect(hostSubtitle(for: entry) == "100.123.34.96 · Screen Sharing nasłuchuje")
+    #expect(hostSubtitle(for: entry, l10n: try makeTestL10n()) == "100.123.34.96 · Screen Sharing listening")
 }
 
-@Test func subtitleShowsIPAndUserWhenUnlockedWithDetails() {
+@MainActor
+@Test func subtitleShowsIPAndUserWhenUnlockedWithDetails() throws {
     let entry = HostEntry(
         host: subtitleHost, status: .online,
         details: HostDetails(consoleUser: "radnok", isScreenLocked: false))
-    #expect(hostSubtitle(for: entry) == "100.123.34.96 · radnok")
+    #expect(hostSubtitle(for: entry, l10n: try makeTestL10n()) == "100.123.34.96 · radnok")
 }
 
-@Test func subtitleAppendsLockedIndicatorWhenLockedWithDetails() {
+@MainActor
+@Test func subtitleAppendsLockedIndicatorWhenLockedWithDetails() throws {
     let entry = HostEntry(
         host: subtitleHost, status: .online,
         details: HostDetails(consoleUser: "radnok", isScreenLocked: true))
-    #expect(hostSubtitle(for: entry) == "100.123.34.96 · radnok · zablokowany")
+    #expect(hostSubtitle(for: entry, l10n: try makeTestL10n()) == "100.123.34.96 · radnok · locked")
 }
 
-@Test func subtitleOmitsUserWhenDetailsHaveNoConsoleUser() {
+@MainActor
+@Test func subtitleOmitsUserWhenDetailsHaveNoConsoleUser() throws {
     let entry = HostEntry(
         host: subtitleHost, status: .online,
         details: HostDetails(consoleUser: nil, isScreenLocked: true))
-    #expect(hostSubtitle(for: entry) == "100.123.34.96 · zablokowany")
+    #expect(hostSubtitle(for: entry, l10n: try makeTestL10n()) == "100.123.34.96 · locked")
 }
 
 /// Details are carried forward across refreshes to stop enriched rows from
 /// flickering. That carry-forward must not survive the host going away: a
-/// sleeping Mac showing "radnok · zablokowany" would hide the very fact the
-/// user opened the menu to learn.
-@Test func subtitleFallsBackToStatusWhenHostIsNoLongerReachable() {
+/// sleeping Mac showing "radnok · locked" would hide the very fact the user
+/// opened the menu to learn.
+@MainActor
+@Test func subtitleFallsBackToStatusWhenHostIsNoLongerReachable() throws {
     let stale = HostDetails(consoleUser: "radnok", isScreenLocked: true)
+    let l10n = try makeTestL10n()
 
     let offline = HostEntry(host: subtitleHost, status: .offline, details: stale)
-    #expect(hostSubtitle(for: offline) == "100.123.34.96 · Offline")
+    #expect(hostSubtitle(for: offline, l10n: l10n) == "100.123.34.96 · Offline")
 
     let sharingOff = HostEntry(host: subtitleHost, status: .screenSharingOff, details: stale)
-    #expect(hostSubtitle(for: sharingOff) == "100.123.34.96 · Screen Sharing wyłączony")
+    #expect(hostSubtitle(for: sharingOff, l10n: l10n) == "100.123.34.96 · Screen Sharing off")
 
     let unknown = HostEntry(host: subtitleHost, status: .unknown, details: stale)
-    #expect(hostSubtitle(for: unknown) == "100.123.34.96 · Nieznany")
+    #expect(hostSubtitle(for: unknown, l10n: l10n) == "100.123.34.96 · Unknown")
 }

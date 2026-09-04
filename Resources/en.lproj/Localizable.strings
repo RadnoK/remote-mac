@@ -1,0 +1,65 @@
+/* Menu — window titles */
+"menu.quick_switcher_title" = "Quick Connect";
+
+/* Menu — states */
+"menu.no_hosts" = "No machines";
+
+/* Menu — actions */
+"menu.quick_connect" = "Quick Connect…";
+"menu.refresh" = "Refresh";
+"menu.settings" = "Settings…";
+"menu.quit" = "Quit";
+
+/* Menu — quick switcher */
+"menu.quick_switcher_search" = "Search machines…";
+
+/* Row actions */
+"row.connect" = "Connect (Screen Sharing)";
+"row.open_ssh" = "Open SSH";
+"row.open_files" = "Open Files (SMB)";
+"row.copy_address" = "Copy IP Address";
+
+/* Status labels */
+"status.unknown" = "Unknown";
+"status.offline" = "Offline";
+"status.online" = "Screen Sharing listening";
+"status.screen_sharing_off" = "Screen Sharing off";
+"status.not_found" = "Host not found";
+
+/* Login item state labels */
+"login_item.enabled" = "Enabled";
+"login_item.disabled" = "Disabled";
+"login_item.requires_approval" = "Requires approval in System Settings";
+"login_item.unavailable" = "Unavailable (app is not signed)";
+
+/* Settings — tabs */
+"settings.tab.general" = "General";
+"settings.tab.hosts" = "Machines";
+
+/* Settings — general */
+"settings.general.terminal_field" = "Terminal:";
+"settings.general.ssh_username_field" = "SSH user:";
+"settings.general.launch_at_login" = "Launch at login";
+"settings.general.open_system_settings" = "Open System Settings";
+"settings.general.warp_clipboard_hint" = "Warp cannot run a command automatically. The command is copied to the clipboard — paste it with ⌘V.";
+"settings.general.terminal_automation_hint" = "Terminal requires automation permission. macOS will ask for it the first time it is used.";
+"settings.general.launch_at_login_error" = "Could not change the launch-at-login setting. This feature requires a signed build of the app — if you are using a development build or revoked the permission in System Settings, the toggle will not work.";
+
+/* Settings — hosts */
+"settings.hosts.manual_header" = "Manually added machines";
+"settings.hosts.name_field" = "Name";
+"settings.hosts.address_field" = "IP address";
+"settings.hosts.add" = "Add";
+
+/* Errors */
+"error.host_list_failed" = "Could not read the list of machines.";
+"error.tailscale_not_found" = "Tailscale not found. Install Tailscale and make sure it is running.";
+"error.tailscale_not_responding" = "Tailscale is not responding.";
+"error.tailscale_cli_unavailable" = "Tailscale is not responding (CLI mode unavailable).";
+"error.tailscale_disconnected" = "Tailscale disconnected (%@).";
+"error.settings_save_failed" = "Could not save settings.";
+"error.launch_failed" = "Could not launch %@.";
+"error.launch_failed_automation" = "Could not launch %@. Check automation permissions in System Settings → Privacy & Security → Automation.";
+
+/* Subtitle */
+"subtitle.locked" = "locked";

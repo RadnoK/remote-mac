@@ -13,12 +13,13 @@ public enum LoginItemState: Sendable, Equatable {
     public static let allValues: [LoginItemState] =
         [.enabled, .disabled, .requiresApproval, .unavailable]
 
-    public var label: String {
+    @MainActor
+    public func label(_ l10n: L10n) -> String {
         switch self {
-        case .enabled:          "Włączone"
-        case .disabled:         "Wyłączone"
-        case .requiresApproval: "Wymaga zgody w Ustawieniach systemowych"
-        case .unavailable:      "Niedostępne (aplikacja nie jest podpisana)"
+        case .enabled:          l10n(.loginItemEnabled)
+        case .disabled:         l10n(.loginItemDisabled)
+        case .requiresApproval: l10n(.loginItemRequiresApproval)
+        case .unavailable:      l10n(.loginItemUnavailable)
         }
     }
 }

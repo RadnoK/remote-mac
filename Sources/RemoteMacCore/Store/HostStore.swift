@@ -17,13 +17,14 @@ public struct HostEntry: Sendable, Identifiable, Equatable {
 /// Builds the single-line subtitle shown under a host's display name.
 ///
 /// Enrichment only ever runs for `.online` hosts, so once `details` are
-/// present the status label is always "Screen Sharing nasłuchuje" — the
+/// present the status label is always "Screen Sharing listening" — the
 /// longest label, and one that carries no new information at that point
 /// (the status dot already shows it). With a 1-line limit in a narrow menu
 /// row, keeping it would push out the lock indicator, which is the entire
 /// point of enrichment. So: no details → IP + status; details present → IP +
 /// console user (if any) + lock indicator (if locked), status dropped.
-public func hostSubtitle(for entry: HostEntry) -> String {
+@MainActor
+public func hostSubtitle(for entry: HostEntry, l10n: L10n) -> String {
     // Details are carried forward across refreshes so an enriched row does not
     // flicker while the next SSH round-trip is in flight. That carry-forward
     // must not outlive reachability: a Mac that has gone to sleep would
@@ -31,11 +32,11 @@ public func hostSubtitle(for entry: HostEntry) -> String {
     // opened the menu to learn. Show details only while the host is still
     // reachable; otherwise fall back to the status label.
     guard entry.status.isConnectable, let details = entry.details else {
-        return [entry.host.ipv4, entry.status.label].joined(separator: " · ")
+        return [entry.host.ipv4, entry.status.label(l10n)].joined(separator: " · ")
     }
     var parts = [entry.host.ipv4]
     if let user = details.consoleUser { parts.append(user) }
-    if details.isScreenLocked == true { parts.append("zablokowany") }
+    if details.isScreenLocked == true { parts.append(l10n(.subtitleLocked)) }
     return parts.joined(separator: " · ")
 }
 
@@ -55,13 +56,19 @@ public final class HostStore {
     /// path or a full disk) would silently discard the user's edit with no
     /// feedback at all.
     public private(set) var settingsError: String?
+    /// Shared localization resolver, kept in sync with `settings.language` so
+    /// a language change re-renders every observing view immediately.
+    public let l10n: L10n
     public var settings: AppSettings {
         didSet {
+            if settings.language != oldValue.language {
+                l10n.setLanguage(settings.language)
+            }
             do {
                 try settingsStore.save(settings)
                 settingsError = nil
             } catch {
-                settingsError = "Nie udało się zapisać ustawień."
+                settingsError = l10n(.errorSettingsSaveFailed)
             }
         }
     }
@@ -100,7 +107,9 @@ public final class HostStore {
         self.sshStatus = sshStatus
         self.settingsStore = settingsStore
         self.launcher = launcher
-        self.settings = settingsStore.load()
+        let loadedSettings = settingsStore.load()
+        self.settings = loadedSettings
+        self.l10n = L10n(language: loadedSettings.language)
     }
 
     /// Refreshes host status. Safe to call while another refresh is already
@@ -261,25 +270,23 @@ public final class HostStore {
 
     private func launchErrorMessage(for terminal: TerminalKind) -> String {
         if terminal.requiresAppleEvents {
-            return "Nie udało się uruchomić \(terminal.displayName). "
-                + "Sprawdź uprawnienia automatyzacji w Ustawieniach systemowych "
-                + "→ Prywatność i bezpieczeństwo → Automatyzacja."
+            return l10n(.errorLaunchFailedAutomation, terminal.displayName)
         }
-        return "Nie udało się uruchomić \(terminal.displayName)."
+        return l10n(.errorLaunchFailed, terminal.displayName)
     }
 
     private func message(for error: Error) -> String {
         switch error {
         case CommandError.notFound:
-            "Nie znaleziono Tailscale. Zainstaluj Tailscale i upewnij się, że jest uruchomiony."
+            l10n(.errorTailscaleNotFound)
         case CommandError.timedOut:
-            "Tailscale nie odpowiada."
+            l10n(.errorTailscaleNotResponding)
         case TailscaleParseError.guiLaunchFailure:
-            "Tailscale nie odpowiada (tryb CLI niedostępny)."
+            l10n(.errorTailscaleCLIUnavailable)
         case let TailscaleParseError.notRunning(state):
-            "Tailscale rozłączony (\(state))."
+            l10n(.errorTailscaleDisconnected, state)
         default:
-            "Nie udało się odczytać listy maszyn."
+            l10n(.errorHostListFailed)
         }
     }
 }

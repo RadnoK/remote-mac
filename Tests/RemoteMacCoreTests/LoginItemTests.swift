@@ -14,6 +14,11 @@ import Testing
     #expect(LoginItemState.requiresApproval != .disabled)
 }
 
-@Test func everyStateHasNonEmptyPolishLabel() {
-    #expect(LoginItemState.allValues.allSatisfy { !$0.label.isEmpty })
+@MainActor
+@Test func everyStateHasNonEmptyLabelInEveryLanguage() throws {
+    let bundle = try resourcesBundle()
+    for language: AppLanguage in [.en, .pl] {
+        let l10n = L10n(language: language, bundles: [bundle])
+        #expect(LoginItemState.allValues.allSatisfy { !$0.label(l10n).isEmpty })
+    }
 }
