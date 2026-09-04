@@ -1,0 +1,20 @@
+import RemoteMacCore
+import SwiftUI
+
+@main
+struct RemoteMacApp: App {
+    @State private var store = HostStore()
+
+    var body: some Scene {
+        MenuBarExtra("RemoteMac", systemImage: "display.2") {
+            MenuView(store: store)
+        }
+        // `.window` is required: `.menu` renders an NSMenu, which cannot host
+        // coloured status indicators or custom rows.
+        .menuBarExtraStyle(.window)
+
+        Settings {
+            SettingsView(store: store)
+        }
+    }
+}
