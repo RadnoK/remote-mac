@@ -8,6 +8,7 @@ struct RemoteMacApp: App {
     var body: some Scene {
         MenuBarExtra("RemoteMac", systemImage: "display.2") {
             MenuView(store: store)
+                .task { store.startPolling() }
         }
         // `.window` is required: `.menu` renders an NSMenu, which cannot host
         // coloured status indicators or custom rows.

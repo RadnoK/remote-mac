@@ -42,6 +42,15 @@ public final class HostStore {
     private let tailscale: TailscaleClient
     private let probe: PortProbing
     private let settingsStore: SettingsStore
+    private var pollingTask: Task<Void, Never>?
+    /// Bumped at the start of every `refresh()` call. Only the call that
+    /// still holds the newest generation when it finishes is allowed to
+    /// commit `entries` — this lets polling (every 30s) and a menu-open
+    /// refresh overlap without a slow, stale call clobbering a faster,
+    /// fresher one that started later and already won.
+    private var refreshGeneration = 0
+
+    public var isPolling: Bool { pollingTask != nil }
     /// `Launching` implementations may be main-thread-affine (see the doc
     /// comment on `AppKitLauncher`): their `Sendable` conformance only
     /// permits crossing actor boundaries, it does not certify the underlying
@@ -64,13 +73,25 @@ public final class HostStore {
         self.settings = settingsStore.load()
     }
 
+    /// Refreshes host status. Safe to call while another refresh is already
+    /// in flight (e.g. background polling overlapping a menu-open refresh):
+    /// every call runs its probes to completion, but only the call that
+    /// started *last* is allowed to commit its results to `entries` and the
+    /// error banners. This avoids two failure modes a naive "last write
+    /// wins at the end" implementation has — a slow call finishing after a
+    /// newer, faster one and clobbering fresh data with stale data — while
+    /// still letting a menu-open refresh do real work instead of silently
+    /// no-oping when a poll tick happens to be in flight.
     public func refresh() async {
+        refreshGeneration += 1
+        let generation = refreshGeneration
+
         var discovered: [Host] = []
+        var newTailscaleError: String?
         do {
             discovered = try await tailscale.fetchMacs()
-            tailscaleError = nil
         } catch {
-            tailscaleError = message(for: error)
+            newTailscaleError = message(for: error)
         }
 
         let hosts = mergeHosts(tailscale: discovered, settings: settings)
@@ -91,7 +112,7 @@ public final class HostStore {
             return results
         }
 
-        entries = hosts.map { host in
+        let newEntries = hosts.map { host in
             HostEntry(
                 host: host,
                 status: resolveStatus(
@@ -100,6 +121,29 @@ public final class HostStore {
                 )
             )
         }
+
+        // A newer refresh has since started; let its result win instead.
+        guard generation == refreshGeneration else { return }
+        tailscaleError = newTailscaleError
+        entries = newEntries
+    }
+
+    /// Refreshes in the background while the menu is closed. Starting twice is
+    /// a no-op rather than stacking tasks.
+    public func startPolling(interval: Duration = .seconds(30)) {
+        guard pollingTask == nil else { return }
+        pollingTask = Task { [weak self] in
+            while !Task.isCancelled {
+                await self?.refresh()
+                if Task.isCancelled { return }
+                try? await Task.sleep(for: interval)
+            }
+        }
+    }
+
+    public func stopPolling() {
+        pollingTask?.cancel()
+        pollingTask = nil
     }
 
     public func connect(to host: Host) {

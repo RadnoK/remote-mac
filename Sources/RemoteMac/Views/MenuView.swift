@@ -68,6 +68,5 @@ struct MenuView: View {
                 .padding(.bottom, 6)
         }
         .frame(width: 280)
-        .task { await store.refresh() }
     }
 }

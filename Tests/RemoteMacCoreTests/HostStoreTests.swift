@@ -60,6 +60,70 @@ private let twoMacsJSON = """
          "Online":true}}}
 """
 
+private let oneMacJSON = """
+{"BackendState":"Running",
+ "Self":{"PublicKey":"nodekey:aaa","HostName":"Mini","DNSName":"mini.ts.net.",
+         "OS":"macOS","TailscaleIPs":["100.123.34.96"],"Online":true}}
+"""
+
+/// Returns `oneMacJSON` for the first call and `twoMacsJSON` for every call
+/// after that, so a test can tell an "older" refresh's result apart from a
+/// "newer" one's. An `actor` (rather than a class with a lock) keeps this
+/// safely `Sendable` for `CommandRunning` under strict concurrency.
+private actor CountingRunner: CommandRunning {
+    private(set) var callCount = 0
+
+    func run(executable: String, arguments: [String],
+             environment: [String: String], timeout: Duration) async throws -> Data {
+        callCount += 1
+        return Data((callCount == 1 ? oneMacJSON : twoMacsJSON).utf8)
+    }
+}
+
+/// Blocks only the *first* probe call it receives (identified by call order,
+/// not by host) until the test explicitly releases it; every subsequent call
+/// returns immediately. This lets a test start an "older" refresh (which
+/// blocks on its one probe call), then start and fully complete a "newer"
+/// refresh (whose probe calls arrive later and are not blocked), and only
+/// afterwards release the older call — deterministically forcing it to
+/// finish last.
+private actor FirstCallGatedProbe: PortProbing {
+    private var callCount = 0
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+    private var released = false
+
+    func probe(host: String, port: UInt16, timeout: Duration) async -> ProbeOutcome {
+        callCount += 1
+        if callCount == 1 { await waitForRelease() }
+        return .listening
+    }
+
+    private func waitForRelease() async {
+        if released { return }
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+
+    func release() {
+        released = true
+        let pending = waiters
+        waiters = []
+        for continuation in pending { continuation.resume() }
+    }
+}
+
+/// Counts calls so a test can prove polling actually stopped producing
+/// refreshes, not merely that `isPolling` flipped to `false`.
+private actor CountingProbe: PortProbing {
+    private(set) var callCount = 0
+
+    func probe(host: String, port: UInt16, timeout: Duration) async -> ProbeOutcome {
+        callCount += 1
+        return .listening
+    }
+}
+
 @MainActor
 private func makeStore(
     runner: CommandRunning,
@@ -252,4 +316,109 @@ private func makeStore(
 
     store.reportSettingsError(nil)
     #expect(store.settingsError == nil)
+}
+
+@MainActor
+@Test func pollingRefreshesRepeatedly() async throws {
+    let store = makeStore(
+        runner: StubRunner(json: twoMacsJSON),
+        probe: StubProbe(outcomes: ["100.123.34.96": .listening])
+    )
+    store.startPolling(interval: .milliseconds(120))
+    defer { store.stopPolling() }
+
+    try await Task.sleep(for: .milliseconds(400))
+    #expect(store.entries.count == 2)
+}
+
+@MainActor
+@Test func stopPollingHaltsFurtherRefreshes() async throws {
+    let store = makeStore(
+        runner: StubRunner(json: twoMacsJSON),
+        probe: StubProbe(outcomes: [:])
+    )
+    store.startPolling(interval: .milliseconds(100))
+    try await Task.sleep(for: .milliseconds(250))
+    store.stopPolling()
+
+    #expect(!store.isPolling)
+}
+
+@MainActor
+@Test func startPollingTwiceDoesNotStackTasks() async throws {
+    let store = makeStore(
+        runner: StubRunner(json: twoMacsJSON),
+        probe: StubProbe(outcomes: [:])
+    )
+    store.startPolling(interval: .milliseconds(100))
+    store.startPolling(interval: .milliseconds(100))
+    defer { store.stopPolling() }
+
+    #expect(store.isPolling)
+}
+
+/// The brief's `stopPollingHaltsFurtherRefreshes` only asserts `isPolling ==
+/// false`, which a `stopPolling()` that flipped the flag but left the loop
+/// running would still pass — `pollingTask?.cancel(); pollingTask = nil`
+/// looks right but the underlying `Task` body only checks `Task.isCancelled`
+/// once per iteration, so a bug there (e.g. checking a copy, or the cancel
+/// not propagating) would not be caught. This test instead counts actual
+/// probe calls: it lets several poll ticks land, stops polling, then waits
+/// long enough that another tick *would* have landed if the loop were still
+/// alive, and asserts no further call occurred.
+@MainActor
+@Test func stopPollingActuallyStopsTheBackgroundLoop() async throws {
+    let probe = CountingProbe()
+    let store = makeStore(
+        runner: StubRunner(json: twoMacsJSON),
+        probe: probe
+    )
+    store.startPolling(interval: .milliseconds(60))
+    try await Task.sleep(for: .milliseconds(200))
+    store.stopPolling()
+
+    let countAtStop = await probe.callCount
+    #expect(countAtStop > 0)
+
+    try await Task.sleep(for: .milliseconds(300))
+    let countAfterWaiting = await probe.callCount
+
+    #expect(countAfterWaiting == countAtStop)
+}
+
+/// Pins the re-entrancy ruling from the task brief: once polling can overlap
+/// a menu-triggered refresh, a slow *older* refresh must not clobber a fast
+/// *newer* one's results. `HostStore` uses a generation counter — every
+/// `refresh()` call still runs to completion, but only the call that was
+/// still the newest when it started is allowed to commit to `entries`.
+///
+/// The older call is held open on a gate until after the newer call has
+/// already committed two hosts; releasing it and letting it finish last must
+/// not regress `entries` back to the older call's one-host result.
+@MainActor
+@Test func overlappingRefreshesDoNotLetAnOlderCallOverwriteANewerOne() async throws {
+    let runner = CountingRunner()
+    let gatedProbe = FirstCallGatedProbe()
+    let store = makeStore(runner: runner, probe: gatedProbe)
+
+    // Older call: resolves to `oneMacJSON` (1 host, 1 probe call), and that
+    // one probe call is the gate's first call, so it blocks mid-refresh
+    // before it can commit.
+    let olderRefresh = Task { await store.refresh() }
+    try await Task.sleep(for: .milliseconds(50))
+
+    // Newer call: resolves to `twoMacsJSON` (2 hosts). Its probe calls are
+    // the gate's 2nd/3rd calls, which are not blocked, so this call runs to
+    // completion and commits 2 entries while the older call is still
+    // parked.
+    await store.refresh()
+    #expect(store.entries.count == 2)
+
+    // Only now let the older, stale call finish. Because it started before
+    // the newer call, its generation is stale by the time it reaches the
+    // commit check, so it must not overwrite the newer call's 2 entries.
+    await gatedProbe.release()
+    await olderRefresh.value
+
+    #expect(store.entries.count == 2)
 }
