@@ -504,3 +504,40 @@ private actor FirstCallGatedSSHRunner: CommandRunning {
     #expect(store.entries.count == 1)
     #expect(store.entries.first?.details?.consoleUser == "fresh-user")
 }
+
+private let subtitleHost = Host(id: "1", name: "mini", displayName: "Mac mini",
+                                ipv4: "100.123.34.96", isOnline: true,
+                                source: .tailscale, sshUsername: "radnok")
+
+/// Enrichment only ever runs for `.online` hosts, whose status label is
+/// always the longest one ("Screen Sharing nasłuchuje" — ~25 characters on
+/// its own). With `.lineLimit(1)` in a ~280pt-wide menu row, keeping that
+/// label once `details` are known would push the lock indicator — the whole
+/// point of enrichment — off the visible line. `hostSubtitle` drops the
+/// status label once `details` are present instead, since the status dot
+/// already encodes it and, at that point, it is always "online" anyway.
+@Test func subtitleShowsIPAndStatusWhenNoDetails() {
+    let entry = HostEntry(host: subtitleHost, status: .online)
+    #expect(hostSubtitle(for: entry) == "100.123.34.96 · Screen Sharing nasłuchuje")
+}
+
+@Test func subtitleShowsIPAndUserWhenUnlockedWithDetails() {
+    let entry = HostEntry(
+        host: subtitleHost, status: .online,
+        details: HostDetails(consoleUser: "radnok", isScreenLocked: false))
+    #expect(hostSubtitle(for: entry) == "100.123.34.96 · radnok")
+}
+
+@Test func subtitleAppendsLockedIndicatorWhenLockedWithDetails() {
+    let entry = HostEntry(
+        host: subtitleHost, status: .online,
+        details: HostDetails(consoleUser: "radnok", isScreenLocked: true))
+    #expect(hostSubtitle(for: entry) == "100.123.34.96 · radnok · zablokowany")
+}
+
+@Test func subtitleOmitsUserWhenDetailsHaveNoConsoleUser() {
+    let entry = HostEntry(
+        host: subtitleHost, status: .online,
+        details: HostDetails(consoleUser: nil, isScreenLocked: true))
+    #expect(hostSubtitle(for: entry) == "100.123.34.96 · zablokowany")
+}

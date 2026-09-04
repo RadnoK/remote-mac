@@ -14,6 +14,25 @@ public struct HostEntry: Sendable, Identifiable, Equatable {
     }
 }
 
+/// Builds the single-line subtitle shown under a host's display name.
+///
+/// Enrichment only ever runs for `.online` hosts, so once `details` are
+/// present the status label is always "Screen Sharing nasłuchuje" — the
+/// longest label, and one that carries no new information at that point
+/// (the status dot already shows it). With a 1-line limit in a narrow menu
+/// row, keeping it would push out the lock indicator, which is the entire
+/// point of enrichment. So: no details → IP + status; details present → IP +
+/// console user (if any) + lock indicator (if locked), status dropped.
+public func hostSubtitle(for entry: HostEntry) -> String {
+    guard let details = entry.details else {
+        return [entry.host.ipv4, entry.status.label].joined(separator: " · ")
+    }
+    var parts = [entry.host.ipv4]
+    if let user = details.consoleUser { parts.append(user) }
+    if details.isScreenLocked == true { parts.append("zablokowany") }
+    return parts.joined(separator: " · ")
+}
+
 @MainActor
 @Observable
 public final class HostStore {

@@ -22,16 +22,30 @@ ioreg -n Root -d1 -k IOConsoleLocked \
   | tr -d ' '
 """
 
+/// Parses the trailing two non-empty lines of `output` as console user and
+/// lock state, reading from the END rather than the start. `consoleStateCommand`
+/// runs two commands in sequence, so its two lines of output are always the
+/// *last* two things written — reading from the end stays correct even if an
+/// MOTD, login banner, or shell rc file prints extra lines first. Reading
+/// from the start (the original approach) would let any such banner shift
+/// every field, silently misattributing a banner line as the console user.
 public func parseConsoleState(_ output: String) -> HostDetails {
-    let lines = output
+    let usableLines = output
         .split(separator: "\n", omittingEmptySubsequences: false)
         .map { $0.trimmingCharacters(in: .whitespaces) }
+        .filter { !$0.isEmpty }
 
-    let rawUser = lines.first.flatMap { $0.isEmpty ? nil : $0 }
+    guard usableLines.count >= 2 else {
+        // Fewer than two usable lines is not enough to trust either field —
+        // guessing which single line is which would be worse than nil.
+        return HostDetails(consoleUser: nil, isScreenLocked: nil)
+    }
+
+    let rawUser = usableLines[usableLines.count - 2]
     // `root` at the console means the login window is showing, not a session.
     let consoleUser = rawUser == "root" ? nil : rawUser
 
-    let lockedValue = lines.count > 1 ? lines[1] : ""
+    let lockedValue = usableLines[usableLines.count - 1]
     let isScreenLocked: Bool? = switch lockedValue {
     case "Yes", "true": true
     case "No", "false": false

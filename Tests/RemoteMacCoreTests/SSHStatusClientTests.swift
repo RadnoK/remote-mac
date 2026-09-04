@@ -43,6 +43,26 @@ private let host = Host(id: "1", name: "mini", displayName: "Mac mini",
     #expect(details.isScreenLocked == nil)
 }
 
+/// Reading from the START (the original approach) would misattribute a
+/// prepended MOTD/banner line as the console user, and the real console user
+/// as the lock state — silently wrong rather than nil. Reading from the END
+/// is robust to any number of prepended lines, because the two commands run
+/// by `consoleStateCommand` always write the final two lines.
+@Test func toleratesPrependedBannerLines() {
+    let withBanner = parseConsoleState(
+        "Last login: Tue Jan 1 00:00:00 on ttys000\nWelcome to macOS\nradnok\nNo\n")
+    let withoutBanner = parseConsoleState("radnok\nNo\n")
+    #expect(withBanner == withoutBanner)
+    #expect(withBanner.consoleUser == "radnok")
+    #expect(withBanner.isScreenLocked == false)
+}
+
+@Test func singleLineOutputYieldsNilLockState() {
+    let details = parseConsoleState("radnok\n")
+    #expect(details.consoleUser == nil)
+    #expect(details.isScreenLocked == nil)
+}
+
 @Test func usesBatchModeSoAPasswordPromptCannotHang() async {
     let recorder = StubRunner.Recorder()
     let client = SSHStatusClient(
