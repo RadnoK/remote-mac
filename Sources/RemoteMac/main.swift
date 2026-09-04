@@ -1,3 +1,3 @@
 import RemoteMacCore
 
-print("RemoteMac \(RemoteMacCore.version)")
+print("RemoteMac \(RemoteMacVersion.version)")
