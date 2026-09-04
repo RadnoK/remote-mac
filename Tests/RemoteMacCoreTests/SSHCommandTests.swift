@@ -36,17 +36,69 @@ import Testing
     #expect(warmNew == false)
 }
 
-@Test func itermEscapesShellMetacharacters() {
-    // iTerm re-parses the string via `login … $SHELL -c`, so metacharacters
-    // in a hostname would otherwise execute.
-    let plan = launchPlan(for: .iterm, user: "radnok", host: "h; touch /tmp/pwned", isRunning: false)
+@Test func itermEscapesShellMetacharactersWithPOSIXQuoting() {
+    // iTerm re-parses the string via `login … $SHELL -c`, so all characters
+    // including newline must be protected. POSIX single-quoting is safe:
+    // no character is special inside '...'.
+    let hostnames = [
+        "h;touch /tmp/x",      // semicolon command injection
+        "h>/tmp/x",            // output redirection
+        "h<in",                // input redirection
+        "h*",                  // glob expansion
+        "h$(id)",              // command substitution
+        "h`id`",               // command substitution
+        "h\nrm -rf x"          // newline - parsed as second command
+    ]
+
+    for hostname in hostnames {
+        let plan = launchPlan(for: .iterm, user: "radnok", host: hostname, isRunning: false)
+        guard case let .openWithArguments(_, arguments, _) = plan else {
+            Issue.record("expected openWithArguments for hostname \(hostname)")
+            return
+        }
+        let arg = arguments[0]
+
+        // Argument must be --command=<single-quoted-string>
+        #expect(arg.hasPrefix("--command="))
+        let quotedContent = String(arg.dropFirst("--command=".count))
+
+        // Must start and end with single quote
+        #expect(quotedContent.hasPrefix("'"))
+        #expect(quotedContent.hasSuffix("'"))
+
+        // Interior must be properly quoted: no unescaped single quotes
+        // Valid patterns: regular chars or '\'' (end quote, escaped quote, start quote)
+        let interior = String(quotedContent.dropFirst().dropLast())
+        var i = interior.startIndex
+        while i < interior.endIndex {
+            let char = interior[i]
+            if char == "'" {
+                // Single quote must be preceded by backslash and followed by single quote
+                // pattern: \''  (actually '\'', but we're inside, so we see \'' )
+                let remaining = String(interior[i...])
+                #expect(remaining.hasPrefix(#"\'"#), "unescaped interior quote at \(i): \(remaining)")
+                // Skip past \''
+                i = interior.index(i, offsetBy: 3, limitedBy: interior.endIndex) ?? interior.endIndex
+            } else {
+                i = interior.index(after: i)
+            }
+        }
+    }
+}
+
+@Test func ghosttyMustNotQuoteArgv() {
+    // Ghostty's `-e` takes an argv array, never a shell string. It must NOT
+    // be quoted, so a hostile hostname passes through verbatim (safely, because
+    // it's argv, not a command string).
+    let plan = launchPlan(for: .ghostty, user: "radnok", host: "h;x", isRunning: false)
     guard case let .openWithArguments(_, arguments, _) = plan else {
         Issue.record("expected openWithArguments")
         return
     }
-    let arg = arguments[0]
-    #expect(!arg.contains("; touch"))
-    #expect(arg.contains("\\;") || arg.contains("'"))
+    // Must be exactly ["-e", "ssh", "radnok@h;x"] - no quoting applied.
+    #expect(arguments == ["-e", "ssh", "radnok@h;x"])
+    // Specifically: no single quotes around the destination.
+    #expect(!arguments[2].contains("'"))
 }
 
 @Test func ghosttyDoesNotEscapeBecauseArgvNeedsNoQuoting() {

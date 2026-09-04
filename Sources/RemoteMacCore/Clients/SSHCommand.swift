@@ -67,21 +67,9 @@ public func launchPlan(
     }
 }
 
-/// Escapes shell metacharacters by prefixing them with backslashes.
+/// Wraps a string in single quotes for POSIX shells, escaping embedded quotes.
 private func shellEscape(_ value: String) -> String {
-    return value
-        .replacingOccurrences(of: "\\", with: "\\\\")
-        .replacingOccurrences(of: ";", with: "\\;")
-        .replacingOccurrences(of: "|", with: "\\|")
-        .replacingOccurrences(of: "&", with: "\\&")
-        .replacingOccurrences(of: "$", with: "\\$")
-        .replacingOccurrences(of: "`", with: "\\`")
-        .replacingOccurrences(of: "!", with: "\\!")
-        .replacingOccurrences(of: "'", with: "\\'")
-        .replacingOccurrences(of: "\"", with: "\\\"")
-        .replacingOccurrences(of: "(", with: "\\(")
-        .replacingOccurrences(of: ")", with: "\\)")
-        .replacingOccurrences(of: " ", with: "\\ ")
+    "'" + value.replacingOccurrences(of: "'", with: #"'\''"#) + "'"
 }
 
 /// Escapes backslashes and double quotes for embedding in an AppleScript
