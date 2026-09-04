@@ -2,3 +2,6 @@
 .DS_Store
 *.xcuserstate
 .remember/
+.superpowers/
+dist/
+docs/superpowers/

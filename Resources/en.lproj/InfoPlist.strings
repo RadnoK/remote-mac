@@ -1,0 +1,1 @@
+"NSAppleEventsUsageDescription" = "RemoteMac needs this to open an SSH session in Terminal. Ghostty and iTerm2 do not require it.";

@@ -1,0 +1,118 @@
+/* Menu — window titles */
+"menu.quick_switcher_title" = "Quick Connect";
+
+/* Menu — header */
+"menu.header.title" = "RemoteMac";
+"menu.header.summary" = "%d machines · %d available";
+
+/* Menu — states */
+"menu.no_hosts" = "No machines";
+"menu.loading" = "Loading machines…";
+
+/* Menu — pane */
+"menu.section.machines" = "Machines";
+
+/* Menu — actions */
+"menu.quick_connect" = "Quick Connect…";
+"menu.refresh" = "Refresh";
+"menu.settings" = "Settings…";
+"menu.check_for_updates" = "Check for Updates…";
+"menu.quit" = "Quit";
+
+/* Menu — quick switcher */
+"menu.quick_switcher_search" = "Search machines…";
+
+/* Row actions */
+"row.connect" = "Connect (Screen Sharing)";
+"row.open_ssh" = "Open SSH";
+"row.open_files" = "Open Files (SMB)";
+"row.copy_address" = "Copy IP Address";
+"row.copy_address_copied" = "Copied!";
+
+/* Status labels */
+"status.unknown" = "Unknown";
+"status.offline" = "Offline";
+"status.online" = "Available";
+"status.screen_sharing_off" = "Sharing off";
+"status.not_found" = "Not found";
+
+/* Login item state labels */
+"login_item.enabled" = "Enabled";
+"login_item.disabled" = "Disabled";
+"login_item.requires_approval" = "Requires approval in System Settings";
+"login_item.unavailable" = "Unavailable (app is not signed)";
+
+/* Settings — tabs */
+"settings.tab.general" = "General";
+"settings.tab.hosts" = "Machines";
+"settings.tab.about" = "About";
+"settings.tab.updates" = "Updates";
+
+/* Settings — general */
+"settings.general.section" = "Terminal";
+"settings.general.terminal_field" = "Terminal:";
+"settings.general.ssh_username_field" = "Default SSH user:";
+"settings.general.ssh_username_field_help" = "Used for any machine without its own SSH user, set on the Machines tab.";
+"settings.general.launch_at_login" = "Launch at login";
+"settings.general.launch_at_login_help" = "Starts RemoteMac automatically when you log in.";
+"settings.general.open_system_settings" = "Open System Settings";
+"settings.general.warp_clipboard_hint" = "Warp cannot run a command automatically. The command is copied to the clipboard — paste it with ⌘V.";
+"settings.general.terminal_automation_hint" = "Terminal requires automation permission. macOS will ask for it the first time it is used.";
+"settings.general.launch_at_login_error" = "Could not change the launch-at-login setting. This feature requires a signed build of the app — if you are using a development build or revoked the permission in System Settings, the toggle will not work.";
+"settings.appearance.section" = "Appearance";
+"settings.appearance.language" = "Language";
+"settings.appearance.language_system" = "System";
+"settings.appearance.language_polish" = "Polish";
+"settings.appearance.language_english" = "English";
+
+/* Settings — hosts */
+"settings.hosts.manual_header" = "Manually added machines";
+"settings.hosts.name_field" = "Name";
+"settings.hosts.address_field" = "IP address";
+"settings.hosts.add" = "Add machine";
+"settings.hosts.remove" = "Remove machine";
+"settings.hosts.remove_confirm" = "Remove this machine?";
+"settings.hosts.empty" = "No manually added machines yet.";
+"settings.hosts.list_section" = "Manually added";
+"settings.hosts.detail_section" = "Machine";
+"settings.hosts.badge_tailscale" = "Tailscale";
+"settings.hosts.badge_manual" = "Manual";
+"settings.hosts.remove_tailscale_help" = "Tailscale machines are discovered automatically and cannot be removed here.";
+"settings.hosts.ssh_user_field" = "SSH user";
+"settings.hosts.show_in_menu" = "Show in menu";
+"settings.hosts.display_name_field" = "Display name";
+"settings.hosts.port_field" = "Screen Sharing port";
+"settings.hosts.connection_section" = "Connection";
+"settings.hosts.appearance_section" = "Display";
+
+/* Settings — about */
+"settings.about.section" = "About";
+"settings.about.version" = "Version";
+"settings.about.website" = "Website";
+"settings.about.contact" = "Contact";
+"settings.about.send_email" = "Send Email";
+
+/* Settings — updates */
+"settings.updates.section" = "Updates";
+"settings.updates.build" = "Build";
+"settings.updates.auto_check" = "Check automatically";
+"settings.updates.frequency" = "Frequency";
+"settings.updates.frequency_daily" = "Daily";
+"settings.updates.frequency_weekly" = "Weekly";
+"settings.updates.auto_download" = "Download and install automatically";
+"settings.updates.check_now" = "Check Now";
+"settings.updates.never_checked" = "Never checked";
+"settings.updates.last_checked" = "Checked %@";
+
+/* Errors */
+"error.host_list_failed" = "Could not read the list of machines.";
+"error.tailscale_not_found" = "Tailscale not found. Install Tailscale and make sure it is running.";
+"error.tailscale_not_responding" = "Tailscale is not responding.";
+"error.tailscale_cli_unavailable" = "Tailscale is not responding (CLI mode unavailable).";
+"error.tailscale_disconnected" = "Tailscale disconnected (%@).";
+"error.settings_save_failed" = "Could not save settings.";
+"error.launch_failed" = "Could not launch %@.";
+"error.launch_failed_automation" = "Could not launch %@. Check automation permissions in System Settings → Privacy & Security → Automation.";
+
+/* Subtitle */
+"subtitle.locked" = "locked";
