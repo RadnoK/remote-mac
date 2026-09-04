@@ -84,10 +84,14 @@ if [[ -n "${SPARKLE_PRIVATE_KEY:-}" ]]; then
   echo "$SPARKLE_PRIVATE_KEY" | "$SPARKLE_BIN/generate_appcast" \
     --ed-key-file - --download-url-prefix "$URL_PREFIX" "$APPCAST_DIR"
 else
-  # Locally: the private key lives in the login keychain under account
-  # io.eightlines.remotemac (see Scripts/build-app.sh / the phase4 release
-  # report for how it got there).
+  # Locally: the private key lives in the login keychain under the account
+  # io.eightlines.remotemac. --account is mandatory here: without it
+  # generate_appcast falls back to the default "ed25519" account, which on a
+  # machine with more than one Sparkle app is somebody else's key — updates
+  # would be signed with a key this app does not trust, and the failure would
+  # only surface on users' machines.
   "$SPARKLE_BIN/generate_appcast" \
+    --account io.eightlines.remotemac \
     --download-url-prefix "$URL_PREFIX" "$APPCAST_DIR"
 fi
 

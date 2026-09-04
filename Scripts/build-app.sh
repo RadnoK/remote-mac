@@ -37,11 +37,16 @@ cp -R "$SPARKLE_FW" "$APP/Contents/Frameworks/"
 install_name_tool -add_rpath "@executable_path/../Frameworks" \
   "$APP/Contents/MacOS/RemoteMac" 2>/dev/null || true
 
-CERT_SHA=$(security find-identity -v -p codesigning \
-  | awk '/Developer ID Application.*7S3F9767BM/{print $2; exit}')
+# Pinned by SHA-1, not by name: this keychain holds two Developer ID
+# certificates with byte-identical common names, so selecting by name picks
+# whichever `security` happens to list first. That is a silent coin flip over
+# which certificate signs a release. CI overrides this with the identity it
+# imported into its own temporary keychain.
+CERT_SHA="${SIGN_IDENTITY:-425A48BCECBD18E1281D14C9A0E6D6937547B090}"
 
-if [ -z "$CERT_SHA" ]; then
-  echo "ERROR: Developer ID certificate not found (Team 7S3F9767BM)." >&2
+if ! security find-identity -v -p codesigning | grep -q "$CERT_SHA"; then
+  echo "ERROR: signing identity $CERT_SHA not found in the keychain." >&2
+  echo "       Set SIGN_IDENTITY to a different SHA-1 to override." >&2
   exit 1
 fi
 

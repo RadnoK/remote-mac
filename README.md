@@ -149,11 +149,23 @@ but update checks will fail against a URL that does not resolve.
    that file at the repository root of `gh-pages` so it lands at the
    `SUFeedURL` above.
 
-3. **The Sparkle signing key** already exists in the login keychain under
-   the account `io.eightlines.remotemac`; its public half is in
-   `Info.plist` as `SUPublicEDKey`. To release from CI instead of locally,
-   export the private key with `~/.local/sparkle/bin/generate_keys -x` and
-   store it as a repository secret.
+3. **CI secrets**, if you want tag-driven releases from GitHub Actions:
+
+   ```bash
+   ./Scripts/setup-ci-secrets.sh
+   ```
+
+   It exports the Developer ID certificate and the Sparkle private key from
+   your keychain into repository secrets, and prompts for the notarization
+   and tap credentials. Read it before running — afterwards GitHub Actions
+   can sign code as you.
+
+   The Sparkle key lives in the login keychain under the account
+   `io.eightlines.remotemac`, and its public half is in `Info.plist` as
+   `SUPublicEDKey`. Every Sparkle command in this repo passes
+   `--account io.eightlines.remotemac`; without it the tools fall back to a
+   default account, which on a machine with more than one Sparkle app is a
+   different app's key.
 
 ## License
 
