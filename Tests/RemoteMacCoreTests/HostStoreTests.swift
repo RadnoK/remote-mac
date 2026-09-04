@@ -215,3 +215,41 @@ private func makeStore(
 
     #expect(store.settingsError != nil)
 }
+
+@MainActor
+@Test func settingsErrorClearsOnSubsequentSuccessfulSave() async {
+    // The clear-on-success branch in the `settings` `didSet` needs its own
+    // assertion: an implementation that set `settingsError` once and never
+    // cleared it would still pass `unwritableSettingsPathSetsSettingsError`.
+    let url = FileManager.default.temporaryDirectory
+        .appendingPathComponent("remotemac-store-\(UUID().uuidString)")
+        .appendingPathComponent("settings.json")
+    let store = HostStore(
+        tailscale: TailscaleClient(runner: StubRunner(json: twoMacsJSON), executablePath: "/fake/Tailscale"),
+        probe: StubProbe(outcomes: [:]),
+        settingsStore: SettingsStore(fileURL: url),
+        launcher: NoopLauncher()
+    )
+    #expect(store.settingsError == nil)
+
+    store.settings.defaultSSHUsername = "someone-else"
+
+    #expect(store.settingsError == nil)
+
+    try? FileManager.default.removeItem(at: url.deletingLastPathComponent())
+}
+
+@MainActor
+@Test func reportSettingsErrorSetsAndClearsTheChannel() async {
+    let store = makeStore(
+        runner: StubRunner(json: twoMacsJSON),
+        probe: StubProbe(outcomes: [:])
+    )
+    #expect(store.settingsError == nil)
+
+    store.reportSettingsError("Nie udało się zmienić ustawienia uruchamiania przy logowaniu.")
+    #expect(store.settingsError != nil)
+
+    store.reportSettingsError(nil)
+    #expect(store.settingsError == nil)
+}

@@ -50,7 +50,16 @@ struct SettingsView: View {
             Toggle("Uruchamiaj przy logowaniu", isOn: Binding(
                 get: { loginState == .enabled },
                 set: { enabled in
-                    try? LoginItem.setEnabled(enabled)
+                    do {
+                        try LoginItem.setEnabled(enabled)
+                        store.reportSettingsError(nil)
+                    } catch {
+                        store.reportSettingsError(
+                            "Nie udało się zmienić ustawienia uruchamiania przy logowaniu. "
+                            + "Ta funkcja wymaga podpisanej wersji aplikacji — jeśli używasz "
+                            + "wersji deweloperskiej lub cofnięto zgodę w Ustawieniach "
+                            + "systemowych, przełącznik nie zadziała.")
+                    }
                     loginState = LoginItem.current
                 }
             ))

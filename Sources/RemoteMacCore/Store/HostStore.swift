@@ -130,6 +130,16 @@ public final class HostStore {
         launchError = nil
     }
 
+    /// Lets a view report (or clear, by passing `nil`) a settings-related
+    /// failure that did not originate from the `settings` `didSet` itself —
+    /// e.g. `LoginItem.setEnabled` throwing `kSMErrorInvalidSignature`. Reuses
+    /// the same `settingsError` channel/banner rather than adding a second,
+    /// so the settings window has one place to look for "your last edit here
+    /// didn't stick."
+    public func reportSettingsError(_ message: String?) {
+        settingsError = message
+    }
+
     public func copyAddress(of host: Host) {
         launcher.copyToClipboard(host.ipv4)
     }
