@@ -13,7 +13,7 @@ struct HostRow: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(entry.host.displayName)
                     .lineLimit(1)
-                Text("\(entry.host.ipv4) · \(entry.status.label)")
+                Text(subtitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -45,5 +45,17 @@ struct HostRow: View {
             Divider()
             Button("Kopiuj adres IP") { store.copyAddress(of: entry.host) }
         }
+    }
+
+    /// The brief's snippet assumed a bare-IP subtitle; this codebase already
+    /// appends the status label (a controller-mandated addition), so SSH
+    /// details are appended on top of that rather than replacing it.
+    private var subtitle: String {
+        var parts = [entry.host.ipv4, entry.status.label]
+        if let details = entry.details {
+            if let user = details.consoleUser { parts.append(user) }
+            if details.isScreenLocked == true { parts.append("zablokowany") }
+        }
+        return parts.joined(separator: " · ")
     }
 }

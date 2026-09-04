@@ -128,6 +128,7 @@ private actor CountingProbe: PortProbing {
 private func makeStore(
     runner: CommandRunning,
     probe: PortProbing,
+    sshStatus: SSHStatusClient = SSHStatusClient(runner: FailingRunner(error: .timedOut)),
     launcher: Launching = NoopLauncher()
 ) -> HostStore {
     let url = FileManager.default.temporaryDirectory
@@ -136,6 +137,7 @@ private func makeStore(
     return HostStore(
         tailscale: TailscaleClient(runner: runner, executablePath: "/fake/Tailscale"),
         probe: probe,
+        sshStatus: sshStatus,
         settingsStore: SettingsStore(fileURL: url),
         launcher: launcher
     )
@@ -421,4 +423,84 @@ private func makeStore(
     await olderRefresh.value
 
     #expect(store.entries.count == 2)
+}
+
+/// Gates the *first* `run` call it receives until explicitly released.
+/// Returns a distinct payload per call order (`"stale-user\nNo\n"` for the
+/// first call, `"fresh-user\nNo\n"` for every call after), so a test can
+/// tell an older refresh's enrichment result apart from a newer one's — the
+/// same trick `CountingRunner` uses for the Tailscale fetch, applied to the
+/// SSH enrichment call instead. Used to hold an older refresh's SSH
+/// enrichment open past the point where a newer refresh has already
+/// committed its own entries and enrichment, so releasing it last proves a
+/// stale enrichment pass cannot clobber fresher data.
+private actor FirstCallGatedSSHRunner: CommandRunning {
+    private var callCount = 0
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+    private var released = false
+
+    func run(executable: String, arguments: [String],
+             environment: [String: String], timeout: Duration) async throws -> Data {
+        callCount += 1
+        let isFirstCall = callCount == 1
+        if isFirstCall { await waitForRelease() }
+        return Data((isFirstCall ? "stale-user\nNo\n" : "fresh-user\nNo\n").utf8)
+    }
+
+    private func waitForRelease() async {
+        if released { return }
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+
+    func release() {
+        released = true
+        let pending = waiters
+        waiters = []
+        for continuation in pending { continuation.resume() }
+    }
+}
+
+/// Pins the same re-entrancy ruling as
+/// `overlappingRefreshesDoNotLetAnOlderCallOverwriteANewerOne`, but for the
+/// enrichment step specifically: `refresh()` commits `entries` once before
+/// awaiting SSH enrichment, then commits again after enrichment completes —
+/// that second commit must also respect the generation counter. Without the
+/// re-check, a slow *older* refresh's enrichment (started before a newer
+/// refresh, but finishing after it) would silently overwrite the newer
+/// refresh's already-committed `details`.
+@MainActor
+@Test func staleEnrichmentPassCannotOverwriteANewerRefreshsEntries() async throws {
+    let sshRunner = FirstCallGatedSSHRunner()
+    let sshStatus = SSHStatusClient(runner: sshRunner)
+    let store = makeStore(
+        runner: StubRunner(json: oneMacJSON),
+        probe: StubProbe(outcomes: ["100.123.34.96": .listening]),
+        sshStatus: sshStatus
+    )
+
+    // Older refresh: one reachable host, so its enrichment issues the SSH
+    // runner's first call, which the gate blocks before it can return
+    // "stale-user" and let the refresh reach its final commit.
+    let olderRefresh = Task { await store.refresh() }
+    try await Task.sleep(for: .milliseconds(50))
+
+    // Newer refresh: also resolves one reachable host, but its SSH call is
+    // the gate's *second* call, which is not blocked and returns
+    // "fresh-user" immediately — so this refresh, including enrichment,
+    // runs to completion and commits "fresh-user" while the older call is
+    // still parked.
+    await store.refresh()
+    #expect(store.entries.first?.details?.consoleUser == "fresh-user")
+
+    // Only now let the older, stale enrichment call finish with
+    // "stale-user". Because it started before the newer call, its
+    // generation is stale by the time it reaches the final commit check, so
+    // it must not overwrite the newer call's already-committed "fresh-user".
+    await sshRunner.release()
+    await olderRefresh.value
+
+    #expect(store.entries.count == 1)
+    #expect(store.entries.first?.details?.consoleUser == "fresh-user")
 }

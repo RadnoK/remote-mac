@@ -4,11 +4,13 @@ import Observation
 public struct HostEntry: Sendable, Identifiable, Equatable {
     public let host: Host
     public let status: HostStatus
+    public let details: HostDetails?
     public var id: String { host.id }
 
-    public init(host: Host, status: HostStatus) {
+    public init(host: Host, status: HostStatus, details: HostDetails? = nil) {
         self.host = host
         self.status = status
+        self.details = details
     }
 }
 
@@ -41,6 +43,7 @@ public final class HostStore {
 
     private let tailscale: TailscaleClient
     private let probe: PortProbing
+    private let sshStatus: SSHStatusClient
     private let settingsStore: SettingsStore
     private var pollingTask: Task<Void, Never>?
     /// Bumped at the start of every `refresh()` call. Only the call that
@@ -63,11 +66,13 @@ public final class HostStore {
     public init(
         tailscale: TailscaleClient = TailscaleClient(),
         probe: PortProbing = NetworkPortProbe(),
+        sshStatus: SSHStatusClient = SSHStatusClient(),
         settingsStore: SettingsStore = SettingsStore(),
         launcher: Launching = AppKitLauncher()
     ) {
         self.tailscale = tailscale
         self.probe = probe
+        self.sshStatus = sshStatus
         self.settingsStore = settingsStore
         self.launcher = launcher
         self.settings = settingsStore.load()
@@ -126,6 +131,33 @@ public final class HostStore {
         guard generation == refreshGeneration else { return }
         tailscaleError = newTailscaleError
         entries = newEntries
+
+        // Enrichment runs after the list is already visible, so a slow or
+        // unavailable SSH path never delays the menu.
+        let reachable = entries.filter { $0.status.isConnectable }.map(\.host)
+        guard !reachable.isEmpty else { return }
+
+        let sshStatus = self.sshStatus
+        let details = await withTaskGroup(of: (String, HostDetails?).self) { group in
+            for host in reachable {
+                group.addTask { (host.id, await sshStatus.fetchDetails(host: host)) }
+            }
+            var results: [String: HostDetails] = [:]
+            for await (id, detail) in group {
+                if let detail { results[id] = detail }
+            }
+            return results
+        }
+
+        // A newer refresh may have started (and possibly already committed)
+        // while enrichment awaited SSH round-trips. Re-check the generation
+        // before touching `entries` again — otherwise a stale enrichment
+        // pass could overwrite a newer refresh's freshly committed entries.
+        guard generation == refreshGeneration else { return }
+        guard !details.isEmpty else { return }
+        entries = entries.map { entry in
+            HostEntry(host: entry.host, status: entry.status, details: details[entry.host.id])
+        }
     }
 
     /// Refreshes in the background while the menu is closed. Starting twice is
