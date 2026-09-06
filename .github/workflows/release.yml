@@ -11,7 +11,9 @@ permissions:
 
 jobs:
   release:
-    runs-on: macos-15
+    # macos-26 ships Xcode 26.6 (Swift 6.3); macos-15 defaults to Swift 6.1,
+    # which cannot read this package's swift-tools-version: 6.2.
+    runs-on: macos-26
     timeout-minutes: 45
 
     steps:
