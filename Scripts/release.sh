@@ -12,7 +12,6 @@ APP_NAME="RemoteMac"
 DIST="dist"
 APP="$DIST/$APP_NAME.app"
 ZIP="$DIST/RemoteMac-$VERSION.zip"
-TEAM_ID="7S3F9767BM"
 KEYCHAIN_PROFILE="${KEYCHAIN_PROFILE:-remotemac-notary}"
 SPARKLE_BIN="${SPARKLE_BIN:-$HOME/.local/sparkle/bin}"
 APPCAST_DIR="$DIST/appcast"
@@ -25,6 +24,10 @@ mkdir -p "$DIST"
 rm -f "$ZIP"
 # ditto, not zip — preserves the bundle's metadata and signature
 ditto -c -k --keepParent "$APP" "$ZIP"
+
+# Read back from the signature rather than hardcoded, so this works for
+# whoever built the app. Only used in the help text below.
+TEAM_ID="$(codesign -dvv "$APP" 2>&1 | awk -F= '/^TeamIdentifier/{print $2}')"
 
 echo "==> Checking notarization credentials"
 # Do NOT run notarization without a real profile — there are no credentials

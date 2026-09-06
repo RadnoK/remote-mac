@@ -7,8 +7,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-REPO="RadnoK/remote-mac"
-CERT_HASH="425A48BCECBD18E1281D14C9A0E6D6937547B090"
+REPO="${REPO:-$(gh repo view --json nameWithOwner --jq .nameWithOwner)}"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
@@ -73,7 +72,9 @@ read -r -s -p "App-specific password: " APP_PASS; echo
 
 printf '%s' "$APPLE_ID"   | gh secret set NOTARY_APPLE_ID --repo "$REPO"
 printf '%s' "$APP_PASS"   | gh secret set NOTARY_PASSWORD --repo "$REPO"
-printf '%s' "7S3F9767BM"  | gh secret set NOTARY_TEAM_ID  --repo "$REPO"
+read -r -p "Team ID: " TEAM_ID
+[[ -n "$TEAM_ID" ]] || { echo "Team ID cannot be empty." >&2; exit 1; }
+printf '%s' "$TEAM_ID"    | gh secret set NOTARY_TEAM_ID  --repo "$REPO"
 
 # --- 4. Tap token -------------------------------------------------------
 echo

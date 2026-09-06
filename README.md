@@ -84,8 +84,14 @@ open ~/Applications/RemoteMac.app
 ```
 
 `Scripts/build-app.sh` builds a release binary, assembles the `.app` bundle,
-embeds `Sparkle.framework` for auto-updates, and signs everything with a
-Developer ID certificate (Team `7S3F9767BM`) found in your keychain.
+embeds `Sparkle.framework` for auto-updates, and signs everything with the
+Developer ID identity it finds in your keychain. If you have more than one it
+will list them and ask you to pick:
+
+```bash
+SIGN_IDENTITY=<sha1> ./Scripts/build-app.sh
+echo <sha1> > .signing-identity   # or save the choice; it's gitignored
+```
 
 ## Configuration
 
@@ -113,59 +119,15 @@ Screen Sharing keeps its own credentials in the macOS keychain.
 
 ## Releasing
 
-This section is for maintainers.
+Maintainers only. Pushing a `vX.Y.Z` tag runs
+[`.github/workflows/release.yml`](.github/workflows/release.yml), which
+builds, signs, notarizes, publishes a GitHub release, updates the
+[Sparkle](https://sparkle-project.org) appcast on `gh-pages`, and bumps the
+Homebrew cask. `Scripts/release.sh <version>` does the same thing locally.
 
-```bash
-./Scripts/release.sh <version>
-```
-
-builds, signs, notarizes (via a `notarytool` keychain profile — see the
-script for setup instructions if you don't have one yet), staples the ticket,
-re-packages, runs a Gatekeeper check, and generates the signed Sparkle
-appcast. Tagging `vX.Y.Z` and pushing runs the same flow in
-[`.github/workflows/release.yml`](.github/workflows/release.yml).
-
-Auto-updates are powered by [Sparkle](https://sparkle-project.org). The
-appcast is served from GitHub Pages
-(`https://radnok.github.io/remote-mac/appcast.xml`) rather than as a release
-asset, so update checks don't depend on any specific release being tagged
-"latest."
-
-### First-time setup
-
-**This has not been done yet** — until it is, the app builds and runs fine
-but update checks will fail against a URL that does not resolve.
-
-1. **Notarization credentials** (once per machine). Create an
-   app-specific password at <https://appleid.apple.com>, then:
-
-   ```bash
-   xcrun notarytool store-credentials remotemac-notary \
-     --apple-id <your-apple-id> --team-id 7S3F9767BM
-   ```
-
-2. **A git remote**, and a `gh-pages` branch with GitHub Pages enabled for
-   it. The first `release.sh` run writes `dist/appcast/appcast.xml`; publish
-   that file at the repository root of `gh-pages` so it lands at the
-   `SUFeedURL` above.
-
-3. **CI secrets**, if you want tag-driven releases from GitHub Actions:
-
-   ```bash
-   ./Scripts/setup-ci-secrets.sh
-   ```
-
-   It exports the Developer ID certificate and the Sparkle private key from
-   your keychain into repository secrets, and prompts for the notarization
-   and tap credentials. Read it before running — afterwards GitHub Actions
-   can sign code as you.
-
-   The Sparkle key lives in the login keychain under the account
-   `io.eightlines.remotemac`, and its public half is in `Info.plist` as
-   `SUPublicEDKey`. Every Sparkle command in this repo passes
-   `--account io.eightlines.remotemac`; without it the tools fall back to a
-   default account, which on a machine with more than one Sparkle app is a
-   different app's key.
+Both need credentials that are not in this repo — a Developer ID certificate,
+notarization credentials, and the Sparkle signing key.
+`Scripts/setup-ci-secrets.sh` populates them as repository secrets.
 
 ## License
 
