@@ -84,16 +84,28 @@ private struct FakeLauncher: Launching {
 /// than asserted: which terminals exist is a property of the machine, not of
 /// this code, and a CI runner has none of them installed. `Terminal.app`
 /// above is the one that ships with macOS and so can be asserted outright.
-@Test func aThirdPartyTerminalIsDetectedWhenInstalled() throws {
+@Test(.enabled(if: AppKitLauncher().hasThirdPartyTerminal))
+func aThirdPartyTerminalIsDetectedWhenInstalled() {
     let launcher = AppKitLauncher()
     let installed = TerminalKind.allCases.filter {
         $0 != .terminal && launcher.isInstalled(bundleIdentifier: $0.bundleIdentifier)
     }
-    try #require(!installed.isEmpty, "no third-party terminal installed")
+    #expect(!installed.isEmpty)
     #expect(installed.allSatisfy { launcher.isInstalled(bundleIdentifier: $0.bundleIdentifier) })
 }
 
 @Test func unknownBundleIdentifierIsNotInstalled() {
     let launcher = AppKitLauncher()
     #expect(!launcher.isInstalled(bundleIdentifier: "com.nonexistent.definitely.not.here"))
+}
+
+private extension AppKitLauncher {
+    /// Whether this machine has any terminal beyond the built-in one. Used to
+    /// gate a test on the environment rather than assert on it: a CI runner
+    /// has none installed, and that is not a defect in this code.
+    var hasThirdPartyTerminal: Bool {
+        TerminalKind.allCases.contains {
+            $0 != .terminal && isInstalled(bundleIdentifier: $0.bundleIdentifier)
+        }
+    }
 }
