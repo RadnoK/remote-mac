@@ -468,13 +468,19 @@ private func makeStore(
     try await Task.sleep(for: .milliseconds(200))
     store.stopPolling()
 
-    let countAtStop = await probe.callCount
-    #expect(countAtStop > 0)
+    #expect(await probe.callCount > 0)
 
+    // `stopPolling()` cancels the loop but does not abort a `refresh()` that
+    // is already in flight — cancellation is cooperative, and the probes of
+    // the tick in progress run to completion. So settle first, then measure:
+    // asserting immediately after the call makes this a race that passes on a
+    // fast machine and fails on a slow one.
     try await Task.sleep(for: .milliseconds(300))
-    let countAfterWaiting = await probe.callCount
+    let settled = await probe.callCount
 
-    #expect(countAfterWaiting == countAtStop)
+    try await Task.sleep(for: .milliseconds(400))
+    #expect(await probe.callCount == settled,
+            "polling kept running after stopPolling()")
 }
 
 /// Pins the re-entrancy ruling from the task brief: once polling can overlap
