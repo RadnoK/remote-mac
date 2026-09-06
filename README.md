@@ -1,4 +1,4 @@
-# RemoteMac
+<img src="docs/images/banner.png" alt="RemoteMac" width="100%">
 
 A macOS menu bar app that lists the Macs on your [Tailscale](https://tailscale.com)
 tailnet by name instead of by IP, and gets you into them with one click — Screen
@@ -23,10 +23,10 @@ Sharing port for any device, or add machines manually:
 
 ![The Devices settings tab showing per-device controls for display name, SSH user, Screen Sharing port, and visibility](docs/images/settings-devices.png)
 
-**Quick connect** — a Spotlight-style window for finding and connecting to a
-machine without touching the mouse:
+**General settings** — pick the terminal SSH opens in, set the fallback SSH
+user, and choose the interface language:
 
-![The quick connect window with a search query typed in and matching devices listed below it](docs/images/quick-connect.png)
+![The General settings tab showing the terminal picker, default SSH user field, launch-at-login toggle and language picker](docs/images/settings-general.png)
 
 ## Features
 

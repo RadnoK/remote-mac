@@ -1,6 +1,9 @@
 #!/bin/bash
 # Builds AppIcon.icns from the asset-catalog-shaped PNG set.
-# iconutil expects @2x naming, the catalog uses -2x, hence the rename.
+#
+# iconutil requires an .iconset directory with @2x naming. The catalog already
+# uses that convention, but the rename below also accepts a -2x set, so a
+# catalog exported by a tool that prefers dashes still builds.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC="$ROOT/Resources/AppIcon.appiconset"

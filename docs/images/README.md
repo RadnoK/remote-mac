@@ -1,33 +1,17 @@
-# Screenshots needed here
+# Images
 
-These three files are referenced by the top-level `README.md` but do not
-exist yet. Capture them and drop them in this folder with these exact names.
+Assets referenced by the top-level `README.md`.
 
-## `menu-bar-panel.png`
+| File | What it is |
+|---|---|
+| `banner.png` | Header banner: app icon, name and tagline. |
+| `menu-bar-panel.png` | The menu bar panel — machines by name with status dots and the icon footer. |
+| `settings-devices.png` | Settings → Machines: the device list with Tailscale badges and the per-device Machine / Display / Connection sections. |
+| `settings-general.png` | Settings → General: terminal picker, fallback SSH user, launch at login, language. |
 
-The main popover, opened from the menu bar icon. Show a handful of Macs in
-the list with a mix of status dots — at least one "available" (green), one
-"sharing off", and one "offline" — so the different states are visible at a
-glance. Include the menu bar icon itself in the shot if possible, to make it
-obvious where the panel comes from.
+Screenshots are taken on a Retina display, so they are 2× the point size.
+Blur any IP addresses and usernames before committing — the panel and the
+Machines tab both show them.
 
-## `settings-devices.png`
-
-The Settings window, on the **Devices** tab. Show the per-device controls:
-display name, SSH user, Screen Sharing port override, and the show/hide
-toggle, ideally with a couple of manually-added hosts alongside
-Tailscale-discovered ones so both sources are visible.
-
-## `quick-connect.png`
-
-The Spotlight-style quick connect window, open with a partial search query
-typed in and a few matching results showing underneath.
-
-## General notes
-
-- Use a light-mode capture unless the app looks meaningfully different in
-  dark mode and it's worth showing both.
-- Redact or use placeholder hostnames/IPs if the real ones are personally
-  identifying — a home tailnet's device names often are.
-- Keep the window chrome minimal (no need for the full desktop background);
-  a tight crop around the panel/window is preferred for the README.
+The app icon itself lives in `Resources/AppIcon.appiconset/`, not here;
+`Scripts/make-icon.sh` turns it into `AppIcon.icns` at build time.
