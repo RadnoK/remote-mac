@@ -31,8 +31,13 @@ jobs:
             exit 1
           fi
 
+      # Only the logic target. RemoteMacTests exercises AppKit
+      # (NSApplication.shared, NSWindow, NSMenu), which parks the process in
+      # CFRunLoopRun on a headless runner — the suites pass individually and
+      # then the process never exits. Those tests still run locally, where
+      # there is a window server.
       - name: Tests
-        run: swift test
+        run: swift test --filter RemoteMacCoreTests
 
       # The certificate lands in a temporary keychain, deleted after the job.
       - name: Import Developer ID certificate
