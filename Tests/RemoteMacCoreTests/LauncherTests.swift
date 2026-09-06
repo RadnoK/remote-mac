@@ -80,9 +80,17 @@ private struct FakeLauncher: Launching {
     #expect(launcher.isInstalled(bundleIdentifier: TerminalKind.terminal.bundleIdentifier))
 }
 
-@Test func ghosttyIsDetectedOnThisMachine() {
+/// Detection against a real terminal, when one is present. Skipped rather
+/// than asserted: which terminals exist is a property of the machine, not of
+/// this code, and a CI runner has none of them installed. `Terminal.app`
+/// above is the one that ships with macOS and so can be asserted outright.
+@Test func aThirdPartyTerminalIsDetectedWhenInstalled() throws {
     let launcher = AppKitLauncher()
-    #expect(launcher.isInstalled(bundleIdentifier: TerminalKind.ghostty.bundleIdentifier))
+    let installed = TerminalKind.allCases.filter {
+        $0 != .terminal && launcher.isInstalled(bundleIdentifier: $0.bundleIdentifier)
+    }
+    try #require(!installed.isEmpty, "no third-party terminal installed")
+    #expect(installed.allSatisfy { launcher.isInstalled(bundleIdentifier: $0.bundleIdentifier) })
 }
 
 @Test func unknownBundleIdentifierIsNotInstalled() {
