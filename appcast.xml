@@ -1,0 +1,15 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>RemoteMac</title>
+        <item>
+            <title>1.0.0</title>
+            <pubDate>Sun, 06 Sep 2026 20:00:24 +0000</pubDate>
+            <sparkle:version>1</sparkle:version>
+            <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <enclosure url="https://github.com/radnok/remote-mac/releases/download/v1.0.0/RemoteMac-1.0.0.zip" length="2352151" type="application/octet-stream" sparkle:edSignature="u259+8xV069ELvKZhqv4VAw08hc44Znr/gnGFyZ15DX4HErMDLQ/8q1sEUmUyvVj74q4hHQ0Otbq4ylzZtWfDg=="/>
+        </item>
+    </channel>
+</rss>
