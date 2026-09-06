@@ -2,7 +2,7 @@
 
 All notable changes to RemoteMac are documented here.
 
-## 1.0 — 2026-09-04
+## 1.0.0 — 2026-09-06
 
 First public release.
 

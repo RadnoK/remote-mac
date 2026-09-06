@@ -2,48 +2,44 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleName</key>
-    <string>RemoteMac</string>
-    <key>CFBundleDisplayName</key>
-    <string>RemoteMac</string>
-    <key>CFBundleExecutable</key>
-    <string>RemoteMac</string>
-    <key>CFBundleIconFile</key>
-    <string>AppIcon</string>
-    <key>CFBundleIdentifier</key>
-    <string>io.eightlines.remotemac</string>
-    <key>CFBundleInfoDictionaryVersion</key>
-    <string>6.0</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
-    <key>CFBundleVersion</key>
-    <string>1</string>
-    <key>CFBundleDevelopmentRegion</key>
-    <string>en</string>
-    <key>CFBundleLocalizations</key>
-    <array>
-        <string>en</string>
-        <string>pl</string>
-    </array>
-    <key>LSMinimumSystemVersion</key>
-    <string>15.0</string>
-    <key>LSUIElement</key>
-    <true/>
-    <key>NSAppleEventsUsageDescription</key>
-    <string>RemoteMac needs this to open an SSH session in Terminal. Ghostty and iTerm2 do not require it.</string>
-    <key>SUEnableAutomaticChecks</key>
-    <true/>
-    <!-- PLACEHOLDER: this URL does not resolve yet. It will start working once the
-         owner publishes gh-pages for this repo per Scripts/release.sh's "Next steps"
-         output and .github/workflows/release.yml's "Publish appcast to gh-pages" step.
-         See the phase4 release report for exactly what is still required. -->
-    <key>SUFeedURL</key>
-    <string>https://radnok.github.io/remote-mac/appcast.xml</string>
-    <key>SUPublicEDKey</key>
-    <string>tsvGxAlVjurDkH3r63omMZbOOc5OUb8yxPl2AfKN1h8=</string>
-    <key>SUScheduledCheckInterval</key>
-    <integer>86400</integer>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>RemoteMac</string>
+	<key>CFBundleExecutable</key>
+	<string>RemoteMac</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleIdentifier</key>
+	<string>io.eightlines.remotemac</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>pl</string>
+	</array>
+	<key>CFBundleName</key>
+	<string>RemoteMac</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>15.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>RemoteMac needs this to open an SSH session in Terminal. Ghostty and iTerm2 do not require it.</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>https://radnok.github.io/remote-mac/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>tsvGxAlVjurDkH3r63omMZbOOc5OUb8yxPl2AfKN1h8=</string>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
 </dict>
 </plist>
