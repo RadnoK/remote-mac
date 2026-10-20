@@ -27,6 +27,14 @@ public struct Host: Sendable, Identifiable, Hashable, Codable {
     /// and `screenSharingURL(for:)` both read the same number instead of one
     /// of them silently falling back to the global default.
     public var screenSharingPort: UInt16
+    /// Whether this Mac shares a LAN with us, so a fast connection mode is
+    /// safe to pick. For Tailscale hosts it comes from `CurAddr`, the physical
+    /// endpoint of a direct path: a private address there means the peers sit
+    /// on the same network, while an empty value means the traffic is relayed
+    /// or idle and says nothing about locality. The tailnet IP in `ipv4`
+    /// (100.64.0.0/10) cannot answer this, because it is the same wherever the
+    /// peer is. Manual hosts use their own address instead.
+    public var isOnLocalNetwork: Bool
 
     public init(
         id: String,
@@ -36,7 +44,8 @@ public struct Host: Sendable, Identifiable, Hashable, Codable {
         isOnline: Bool,
         source: HostSource,
         sshUsername: String? = nil,
-        screenSharingPort: UInt16 = RemoteMacCore.screenSharingPort
+        screenSharingPort: UInt16 = RemoteMacCore.screenSharingPort,
+        isOnLocalNetwork: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -46,5 +55,6 @@ public struct Host: Sendable, Identifiable, Hashable, Codable {
         self.source = source
         self.sshUsername = sshUsername
         self.screenSharingPort = screenSharingPort
+        self.isOnLocalNetwork = isOnLocalNetwork
     }
 }

@@ -24,6 +24,9 @@ private struct Node: Decodable {
     let OS: String?
     let TailscaleIPs: [String]?
     let Online: Bool?
+    /// Physical "ip:port" of the direct path to this peer. Empty when the
+    /// connection is relayed or idle, and absent for some nodes.
+    let CurAddr: String?
     // `Tags` is intentionally omitted: the key is absent for user-owned
     // devices (not null), and we never read it.
 }
@@ -74,7 +77,8 @@ private func makeHost(_ node: Node) -> Host? {
         displayName: node.HostName.flatMap { $0 == "localhost" ? nil : $0 } ?? name,
         ipv4: ipv4,
         isOnline: node.Online ?? false,
-        source: .tailscale
+        source: .tailscale,
+        isOnLocalNetwork: node.CurAddr.map(isPrivateEndpoint) ?? false
     )
 }
 

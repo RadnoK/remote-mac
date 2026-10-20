@@ -26,7 +26,8 @@ public func mergeHosts(tailscale: [Host], settings: AppSettings) -> [Host] {
                 displayName: entry.name,
                 ipv4: entry.address,
                 isOnline: false,
-                source: .manual
+                source: .manual,
+                isOnLocalNetwork: isPrivateEndpoint(entry.address)
             )
         }
 
