@@ -102,19 +102,28 @@ public final class HostStore {
     /// on the main actor — that isolation, not the conformance, is what makes
     /// this safe.
     private let launcher: Launching
+    private let accountLookup: ScreenSharingAccountLookup
+    private let typeSelector: ScreenSharingTypeSelecting
+    private let accessibility: AccessibilityPermission
 
     public init(
         tailscale: TailscaleClient = TailscaleClient(),
         probe: PortProbing = NetworkPortProbe(),
         sshStatus: SSHStatusClient = SSHStatusClient(),
         settingsStore: SettingsStore = SettingsStore(),
-        launcher: Launching = AppKitLauncher()
+        launcher: Launching = AppKitLauncher(),
+        accountLookup: ScreenSharingAccountLookup = KeychainScreenSharingAccountLookup(),
+        typeSelector: ScreenSharingTypeSelecting? = nil,
+        accessibility: AccessibilityPermission = SystemAccessibilityPermission()
     ) {
         self.tailscale = tailscale
         self.probe = probe
         self.sshStatus = sshStatus
         self.settingsStore = settingsStore
         self.launcher = launcher
+        self.accountLookup = accountLookup
+        self.typeSelector = typeSelector ?? AXScreenSharingTypeSelector()
+        self.accessibility = accessibility
         let loadedSettings = settingsStore.load()
         self.settings = loadedSettings
         self.l10n = L10n(language: loadedSettings.language)
@@ -231,9 +240,32 @@ public final class HostStore {
         pollingTask = nil
     }
 
+    /// Opens Screen Sharing for `host`, carrying the account Screen Sharing
+    /// remembered so it reuses its stored password. When auto-select is on
+    /// and Accessibility is trusted, the type selector opens the URL itself
+    /// so it can ignore windows that already existed; every other path opens
+    /// the URL directly. The URL is opened exactly once either way.
     public func connect(to host: Host) {
-        guard let url = screenSharingURL(for: host, account: nil) else { return }
-        launcher.openScreenSharing(url: url)
+        let account = accountLookup.account(forServer: host.ipv4, port: host.screenSharingPort)
+        let launcher = self.launcher
+        let open: () -> Void = {
+            guard let url = screenSharingURL(for: host, account: account) else { return }
+            launcher.openScreenSharing(url: url)
+        }
+        if settings.autoSelectScreenSharingType, accessibility.isTrusted,
+           let type = resolveScreenSharingType(
+               preference: host.screenSharingType, isOnLocalNetwork: host.isOnLocalNetwork)
+        {
+            typeSelector.select(type, opening: open)
+        } else {
+            open()
+        }
+    }
+
+    public var isAccessibilityTrusted: Bool { accessibility.isTrusted }
+
+    public func requestAccessibilityTrust() {
+        accessibility.requestTrust()
     }
 
     public func openSSH(to host: Host) {
