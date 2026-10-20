@@ -27,6 +27,11 @@ public struct AppSettings: Sendable, Codable, Equatable {
     /// Interface language. `.system` defers to macOS. Not yet exposed in
     /// Settings UI — persisted so a later task can wire up the picker.
     public var language: AppLanguage
+    /// Master switch for answering Screen Sharing's Standard / High
+    /// Performance chooser automatically. Off by default.
+    public var autoSelectScreenSharingType: Bool
+    /// Host id → chooser preference. Absent means `.auto`.
+    public var screenSharingTypes: [String: ScreenSharingTypePreference]
 
     public init(
         terminal: TerminalKind = .ghostty,
@@ -36,7 +41,9 @@ public struct AppSettings: Sendable, Codable, Equatable {
         hiddenHostIDs: [String] = [],
         displayNameOverrides: [String: String] = [:],
         screenSharingPorts: [String: UInt16] = [:],
-        language: AppLanguage = .system
+        language: AppLanguage = .system,
+        autoSelectScreenSharingType: Bool = false,
+        screenSharingTypes: [String: ScreenSharingTypePreference] = [:]
     ) {
         self.terminal = terminal
         self.defaultSSHUsername = defaultSSHUsername
@@ -46,6 +53,8 @@ public struct AppSettings: Sendable, Codable, Equatable {
         self.displayNameOverrides = displayNameOverrides
         self.screenSharingPorts = screenSharingPorts
         self.language = language
+        self.autoSelectScreenSharingType = autoSelectScreenSharingType
+        self.screenSharingTypes = screenSharingTypes
     }
 
     public static let `default` = AppSettings()
@@ -75,9 +84,16 @@ public struct AppSettings: Sendable, Codable, Equatable {
         screenSharingPorts[host.id] ?? RemoteMacCore.screenSharingPort
     }
 
+    /// The chooser preference for `host`: its own entry if one is set,
+    /// otherwise `.auto`.
+    public func screenSharingType(for host: Host) -> ScreenSharingTypePreference {
+        screenSharingTypes[host.id] ?? .auto
+    }
+
     private enum CodingKeys: String, CodingKey {
         case terminal, defaultSSHUsername, sshUsernames, manualHosts, hiddenHostIDs
         case displayNameOverrides, screenSharingPorts, language
+        case autoSelectScreenSharingType, screenSharingTypes
     }
 
     /// `language` was added after `AppSettings` shipped, so a settings file
@@ -98,5 +114,15 @@ public struct AppSettings: Sendable, Codable, Equatable {
         screenSharingPorts = try container.decodeIfPresent(
             [String: UInt16].self, forKey: .screenSharingPorts) ?? [:]
         language = try container.decodeIfPresent(AppLanguage.self, forKey: .language) ?? .system
+        autoSelectScreenSharingType = try container.decodeIfPresent(
+            Bool.self, forKey: .autoSelectScreenSharingType) ?? false
+        // Like `language`, these keys are absent from older files. The values
+        // are read as plain strings and mapped through the enum, so a
+        // preference this build does not know (hand-edited, or written by a
+        // newer build) drops just that entry instead of failing the whole
+        // decode and discarding the user's other saved settings.
+        screenSharingTypes = (try container.decodeIfPresent(
+            [String: String].self, forKey: .screenSharingTypes) ?? [:])
+            .compactMapValues(ScreenSharingTypePreference.init(rawValue:))
     }
 }

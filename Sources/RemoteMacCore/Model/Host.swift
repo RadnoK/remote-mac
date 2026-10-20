@@ -35,6 +35,9 @@ public struct Host: Sendable, Identifiable, Hashable, Codable {
     /// (100.64.0.0/10) cannot answer this, because it is the same wherever the
     /// peer is. Manual hosts use their own address instead.
     public var isOnLocalNetwork: Bool
+    /// How to answer Screen Sharing's Standard / High Performance chooser.
+    /// Resolved by `mergeHosts` from `AppSettings.screenSharingTypes`.
+    public var screenSharingType: ScreenSharingTypePreference
 
     public init(
         id: String,
@@ -45,7 +48,8 @@ public struct Host: Sendable, Identifiable, Hashable, Codable {
         source: HostSource,
         sshUsername: String? = nil,
         screenSharingPort: UInt16 = RemoteMacCore.screenSharingPort,
-        isOnLocalNetwork: Bool = false
+        isOnLocalNetwork: Bool = false,
+        screenSharingType: ScreenSharingTypePreference = .auto
     ) {
         self.id = id
         self.name = name
@@ -56,5 +60,6 @@ public struct Host: Sendable, Identifiable, Hashable, Codable {
         self.sshUsername = sshUsername
         self.screenSharingPort = screenSharingPort
         self.isOnLocalNetwork = isOnLocalNetwork
+        self.screenSharingType = screenSharingType
     }
 }

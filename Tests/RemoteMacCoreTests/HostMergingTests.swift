@@ -145,3 +145,15 @@ private func tailscaleHost(_ name: String, _ ip: String, id: String? = nil) -> H
     #expect(merged.first { $0.name == "wan" }?.isOnLocalNetwork == false)
     #expect(merged.first { $0.name == "named" }?.isOnLocalNetwork == false)
 }
+
+@Test func mergeResolvesScreenSharingType() {
+    var settings = AppSettings.default
+    settings.screenSharingTypes = ["nodekey:mini": .highPerformance]
+
+    let merged = mergeHosts(
+        tailscale: [tailscaleHost("mini", "100.64.10.1"), tailscaleHost("mbp", "100.64.10.2")],
+        settings: settings
+    )
+    #expect(merged.first { $0.name == "mini" }?.screenSharingType == .highPerformance)
+    #expect(merged.first { $0.name == "mbp" }?.screenSharingType == .auto)
+}
