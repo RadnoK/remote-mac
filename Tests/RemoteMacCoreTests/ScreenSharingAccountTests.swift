@@ -39,8 +39,8 @@ private func candidate(
     #expect(selectAccount(from: [candidate("", port: 5900), candidate(nil)], port: 5900) == nil)
 }
 
-/// An entry without a stored port is how Screen Sharing records the default
-/// port, so it must match 5900 and nothing else.
+/// Screen Sharing's entries store 5900; a missing port is also treated as the
+/// default, so it must match 5900 and nothing else.
 @Test func candidateWithoutPortMatchesOnlyTheDefaultPort() {
     let candidates = [candidate("Jane Appleseed", port: nil)]
     #expect(selectAccount(from: candidates, port: 5900) == "Jane Appleseed")

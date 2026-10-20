@@ -152,7 +152,7 @@ private let realisticJSON = """
     "HostName": "The Tailscale GUI failed to start Server",
     "DNSName": "weird-host.tailnet-1234.ts.net.",
     "OS": "macOS",
-    "TailscaleIPs": ["100.99.88.77"],
+    "TailscaleIPs": ["100.64.88.77"],
     "Online": true
   },
   "Peer": null
@@ -162,7 +162,7 @@ private let realisticJSON = """
     #expect(hosts.count == 1)
     let host = try #require(hosts.first)
     #expect(host.displayName == "The Tailscale GUI failed to start Server")
-    #expect(host.ipv4 == "100.99.88.77")
+    #expect(host.ipv4 == "100.64.88.77")
 }
 
 @Test func absentBackendStateIsMalformed() {

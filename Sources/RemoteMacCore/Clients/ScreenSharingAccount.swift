@@ -26,8 +26,9 @@ public struct KeychainAccountCandidate: Sendable, Equatable {
 }
 
 /// A candidate with no stored port counts as the default port only: Screen
-/// Sharing leaves the port unset for 5900, so treating it as a wildcard would
-/// hand a 5900 account to a host listening on another port. Among matches the
+/// Sharing's entries store 5900, and a missing port is also treated as the
+/// default, so treating it as a wildcard would hand a 5900 account to a host
+/// listening on another port. Among matches the
 /// most recently modified wins, because the newest entry is the one the user
 /// last typed a password for.
 public func selectAccount(from candidates: [KeychainAccountCandidate], port: UInt16) -> String? {
@@ -38,8 +39,9 @@ public func selectAccount(from candidates: [KeychainAccountCandidate], port: UIn
         .account
 }
 
-/// Reads attributes only, never the secret, so no password is handled and
-/// the Keychain does not ask for authorisation.
+/// Reads attributes only, never the secret, so no password is handled. The
+/// no-interaction `LAContext` is what guarantees the Keychain never shows an
+/// authorisation prompt.
 public struct KeychainScreenSharingAccountLookup: ScreenSharingAccountLookup {
     public init() {}
 

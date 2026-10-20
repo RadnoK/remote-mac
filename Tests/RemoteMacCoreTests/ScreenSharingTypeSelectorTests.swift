@@ -282,12 +282,14 @@ private func makeSelector(_ source: FakeSource, timeout: Duration) -> AXScreenSh
     let selector = makeSelector(source, timeout: longTimeout)
 
     let firstTask = selector.select(.highPerformance) { source.add(first.window) }
-    // Let the first watcher find its chooser and start waiting on confirm.
+    // Let the first watcher find its chooser, press the discovery radio and
+    // start waiting on confirm. The radio press comes after the first
+    // confirm read, so wait on the press itself.
     let waitStart = ContinuousClock.now
-    while first.confirm.enabledReads == 0, ContinuousClock.now - waitStart < .seconds(5) {
+    while first.highPerformance.pressCount < 1, ContinuousClock.now - waitStart < .seconds(5) {
         try? await Task.sleep(for: .milliseconds(1))
     }
-    #expect(first.confirm.enabledReads > 0)
+    #expect(first.highPerformance.pressCount == 1)
 
     let start = ContinuousClock.now
     let secondTask = selector.select(.standard) { source.add(second.window) }

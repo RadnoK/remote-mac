@@ -82,10 +82,12 @@ private final class RecordingLauncher: Launching, @unchecked Sendable {
 }
 
 /// Records the requested type and runs `open` once, like the real selector
-/// does, then returns an already-finished task.
+/// does, then returns an already-finished task. Counts `cancel()` so a test
+/// can prove every connect supersedes a watcher left over from an earlier one.
 @MainActor
 private final class RecordingSelector: ScreenSharingTypeSelecting {
     private(set) var selectedTypes: [ScreenSharingType] = []
+    private(set) var cancelCount = 0
 
     func select(_ type: ScreenSharingType, opening open: () -> Void) -> Task<Void, Never> {
         selectedTypes.append(type)
@@ -93,12 +95,28 @@ private final class RecordingSelector: ScreenSharingTypeSelecting {
         return Task {}
     }
 
-    func cancel() {}
+    func cancel() { cancelCount += 1 }
 }
 
-private struct StubAccountLookup: ScreenSharingAccountLookup {
+/// Records the `(server, port)` each lookup asked for, so a test can prove
+/// `connect` queries the Keychain for the host it is about to open.
+private final class StubAccountLookup: ScreenSharingAccountLookup, @unchecked Sendable {
+    struct Query: Equatable {
+        let server: String
+        let port: UInt16
+    }
+
+    private let lock = NSLock()
+    private var recorded: [Query] = []
+    var queries: [Query] { lock.withLock { recorded } }
     let account: String?
-    func account(forServer server: String, port: UInt16) -> String? { account }
+
+    init(account: String?) { self.account = account }
+
+    func account(forServer server: String, port: UInt16) -> String? {
+        lock.withLock { recorded.append(Query(server: server, port: port)) }
+        return account
+    }
 }
 
 private final class FakePermission: AccessibilityPermission, @unchecked Sendable {
@@ -114,11 +132,12 @@ private final class FakePermission: AccessibilityPermission, @unchecked Sendable
 
 private func connectHost(
     isOnLocalNetwork: Bool = false,
-    preference: ScreenSharingTypePreference = .auto
+    preference: ScreenSharingTypePreference = .auto,
+    port: UInt16 = RemoteMacCore.screenSharingPort
 ) -> RemoteMacCore.Host {
     Host(
         id: "nodekey:aaa", name: "mini", displayName: "Mini", ipv4: "100.64.10.1",
-        isOnline: true, source: .tailscale,
+        isOnline: true, source: .tailscale, screenSharingPort: port,
         isOnLocalNetwork: isOnLocalNetwork, screenSharingType: preference)
 }
 
@@ -814,6 +833,20 @@ private func makeTestL10n() throws -> L10n {
 }
 
 @MainActor
+@Test func connectLooksUpAccountForTheHostAddressAndPort() {
+    let lookup = StubAccountLookup(account: "Jane Appleseed")
+    let launcher = RecordingLauncher()
+    let store = makeStore(
+        runner: StubRunner(json: oneMacJSON), probe: StubProbe(outcomes: [:]),
+        launcher: launcher, accountLookup: lookup)
+
+    store.connect(to: connectHost(port: 5901))
+
+    #expect(lookup.queries == [.init(server: "100.64.10.1", port: 5901)])
+    #expect(launcher.openedURLs.map(\.absoluteString) == ["vnc://Jane%20Appleseed@100.64.10.1:5901"])
+}
+
+@MainActor
 @Test func connectWithoutAccountOpensPlainURL() {
     let launcher = RecordingLauncher()
     let store = makeStore(
@@ -846,10 +879,54 @@ func connectSelectsTypePerPreferenceAndNetwork(
         launcher: launcher, typeSelector: selector,
         accessibility: FakePermission(trusted: true))
     store.settings.autoSelectScreenSharingType = true
+    let host = connectHost(isOnLocalNetwork: onLAN, preference: preference)
+    store.settings.screenSharingTypes[host.id] = preference
 
-    store.connect(to: connectHost(isOnLocalNetwork: onLAN, preference: preference))
+    store.connect(to: host)
 
     #expect(selector.selectedTypes == (expected.map { [$0] } ?? []))
+    #expect(selector.cancelCount == 1)
+    #expect(launcher.openedURLs.count == 1)
+}
+
+/// The per-Mac type is read from settings at connect time, so a `Host`
+/// snapshot taken before the user changed it must not win.
+@MainActor
+@Test func connectResolvesTypeFromLiveSettingsNotTheHostSnapshot() {
+    let selector = RecordingSelector()
+    let launcher = RecordingLauncher()
+    let store = makeStore(
+        runner: StubRunner(json: oneMacJSON), probe: StubProbe(outcomes: [:]),
+        launcher: launcher, typeSelector: selector,
+        accessibility: FakePermission(trusted: true))
+    store.settings.autoSelectScreenSharingType = true
+    let host = connectHost(preference: .auto)
+    store.settings.screenSharingTypes[host.id] = .standard
+
+    store.connect(to: host)
+
+    #expect(selector.selectedTypes == [.standard])
+    #expect(launcher.openedURLs.count == 1)
+}
+
+/// `.ask` opens the URL directly, but a watcher left over from an earlier
+/// auto connect must still be cancelled or it would answer this chooser.
+@MainActor
+@Test func connectAskCancelsPendingWatcherWithoutSelecting() {
+    let selector = RecordingSelector()
+    let launcher = RecordingLauncher()
+    let store = makeStore(
+        runner: StubRunner(json: oneMacJSON), probe: StubProbe(outcomes: [:]),
+        launcher: launcher, typeSelector: selector,
+        accessibility: FakePermission(trusted: true))
+    store.settings.autoSelectScreenSharingType = true
+    let host = connectHost(preference: .ask)
+    store.settings.screenSharingTypes[host.id] = .ask
+
+    store.connect(to: host)
+
+    #expect(selector.cancelCount == 1)
+    #expect(selector.selectedTypes.isEmpty)
     #expect(launcher.openedURLs.count == 1)
 }
 
@@ -866,6 +943,7 @@ func connectSelectsTypePerPreferenceAndNetwork(
     store.connect(to: connectHost())
 
     #expect(selector.selectedTypes.isEmpty)
+    #expect(selector.cancelCount == 1)
     #expect(launcher.openedURLs.count == 1)
 }
 
