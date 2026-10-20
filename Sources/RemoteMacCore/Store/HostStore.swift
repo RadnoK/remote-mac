@@ -245,16 +245,23 @@ public final class HostStore {
     /// and Accessibility is trusted, the type selector opens the URL itself
     /// so it can ignore windows that already existed; every other path opens
     /// the URL directly. The URL is opened exactly once either way.
+    ///
+    /// Any in-flight watcher is cancelled first, on every path: a watcher
+    /// left polling from an earlier connect would otherwise answer this
+    /// connect's chooser with the earlier Mac's type, including when this
+    /// connect does not auto-select at all.
     public func connect(to host: Host) {
+        typeSelector.cancel()
         let account = accountLookup.account(forServer: host.ipv4, port: host.screenSharingPort)
+        guard let url = screenSharingURL(for: host, account: account) else { return }
         let launcher = self.launcher
-        let open: () -> Void = {
-            guard let url = screenSharingURL(for: host, account: account) else { return }
-            launcher.openScreenSharing(url: url)
-        }
+        let open: () -> Void = { launcher.openScreenSharing(url: url) }
+        // Read live like the toggle: `host` may be a snapshot from before the
+        // user changed this Mac's type in Settings.
         if settings.autoSelectScreenSharingType, accessibility.isTrusted,
            let type = resolveScreenSharingType(
-               preference: host.screenSharingType, isOnLocalNetwork: host.isOnLocalNetwork)
+               preference: settings.screenSharingType(for: host),
+               isOnLocalNetwork: host.isOnLocalNetwork)
         {
             typeSelector.select(type, opening: open)
         } else {
