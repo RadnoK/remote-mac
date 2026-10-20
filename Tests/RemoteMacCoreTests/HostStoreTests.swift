@@ -48,7 +48,7 @@ private actor PortRecordingProbe: PortProbing {
 }
 
 private struct NoopLauncher: Launching {
-    func openScreenSharing(host: RemoteMacCore.Host) {}
+    func openScreenSharing(url: URL) {}
     func openFileSharing(host: RemoteMacCore.Host) {}
     func copyToClipboard(_ text: String) {}
     func execute(_ plan: LaunchPlan) -> Bool { true }
@@ -57,7 +57,7 @@ private struct NoopLauncher: Launching {
 }
 
 private struct FailingLauncher: Launching {
-    func openScreenSharing(host: RemoteMacCore.Host) {}
+    func openScreenSharing(url: URL) {}
     func openFileSharing(host: RemoteMacCore.Host) {}
     func copyToClipboard(_ text: String) {}
     func execute(_ plan: LaunchPlan) -> Bool { false }

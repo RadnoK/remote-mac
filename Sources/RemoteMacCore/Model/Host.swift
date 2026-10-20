@@ -24,7 +24,7 @@ public struct Host: Sendable, Identifiable, Hashable, Codable {
     /// (5900) and is only ever overridden by `mergeHosts` resolving a
     /// per-host `AppSettings.screenSharingPorts` entry — carrying the
     /// resolved value on `Host` itself means `HostStore.refresh()`'s probe
-    /// and `screenSharingURL(for:)` both read the same number instead of one
+    /// and `screenSharingURL(for:account:)` both read the same number instead of one
     /// of them silently falling back to the global default.
     public var screenSharingPort: UInt16
     /// Whether this Mac shares a LAN with us, so a fast connection mode is

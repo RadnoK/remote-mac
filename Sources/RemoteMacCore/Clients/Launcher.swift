@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 
 public protocol Launching: Sendable {
-    func openScreenSharing(host: Host)
+    func openScreenSharing(url: URL)
     func openFileSharing(host: Host)
     func copyToClipboard(_ text: String)
     /// Returns `false` when the plan could not be carried out — e.g. the
@@ -15,19 +15,26 @@ public protocol Launching: Sendable {
     func isInstalled(bundleIdentifier: String) -> Bool
 }
 
-/// Credentials are deliberately absent: Screen Sharing stores the password in
-/// the macOS Keychain, so the app never handles secrets.
+/// The account, when given, is the one Screen Sharing already remembered in
+/// the Keychain: it only reuses the stored password, and so skips its dialog,
+/// when the URL's account matches that entry exactly. A password never appears
+/// here, so the app still handles no secrets.
 ///
 /// `vnc://host` and `vnc://host:5900` are equivalent, so the port is only
 /// appended when `host.screenSharingPort` differs from the default — keeping
 /// the common case's URL clean while still letting a per-host override (see
 /// `AppSettings.screenSharingPorts`, resolved onto `Host` by `mergeHosts`)
 /// actually reach Screen Sharing instead of silently connecting to 5900.
-public func screenSharingURL(for host: Host) -> URL? {
+public func screenSharingURL(for host: Host, account: String?) -> URL? {
+    // `.urlUserAllowed` is stripped of the userinfo delimiters explicitly so
+    // an account such as "a@b" can never be read as a different host.
+    let allowed = CharacterSet.urlUserAllowed.subtracting(CharacterSet(charactersIn: "@:/"))
+    let userinfo = account?.addingPercentEncoding(withAllowedCharacters: allowed)
+        .flatMap { $0.isEmpty ? nil : "\($0)@" } ?? ""
     guard host.screenSharingPort != RemoteMacCore.screenSharingPort else {
-        return URL(string: "vnc://\(host.ipv4)")
+        return URL(string: "vnc://\(userinfo)\(host.ipv4)")
     }
-    return URL(string: "vnc://\(host.ipv4):\(host.screenSharingPort)")
+    return URL(string: "vnc://\(userinfo)\(host.ipv4):\(host.screenSharingPort)")
 }
 
 public func fileSharingURL(for host: Host) -> URL? {
@@ -49,8 +56,7 @@ public func installedTerminals(using launcher: Launching) -> [TerminalKind] {
 public struct AppKitLauncher: Launching, Sendable {
     public init() {}
 
-    public func openScreenSharing(host: Host) {
-        guard let url = screenSharingURL(for: host) else { return }
+    public func openScreenSharing(url: URL) {
         NSWorkspace.shared.open(url)
     }
 

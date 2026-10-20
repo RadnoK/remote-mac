@@ -232,7 +232,8 @@ public final class HostStore {
     }
 
     public func connect(to host: Host) {
-        launcher.openScreenSharing(host: host)
+        guard let url = screenSharingURL(for: host, account: nil) else { return }
+        launcher.openScreenSharing(url: url)
     }
 
     public func openSSH(to host: Host) {
