@@ -83,24 +83,43 @@ public final class AXScreenSharingTypeSelector: ScreenSharingTypeSelecting {
             }
         }
         guard let (windowID, chooser) = found else { return }
-
-        switch type {
-        case .standard: chooser.standard.press()
-        case .highPerformance: chooser.highPerformance.press()
+        let answer = switch type {
+        case .standard: chooser.standard
+        case .highPerformance: chooser.highPerformance
         }
 
         // Success is the chooser going away, not a press returning `.success`.
+        // The radio is pressed again right before every confirm press: the
+        // dialog reports every control enabled even while "Connecting…", so
+        // a radio press can be swallowed just like a confirm press, and a
+        // confirm retry alone would then commit the default (Standard).
+        var answered = false
         while !Task.isCancelled {
             guard source.windows().contains(where: { $0.id == windowID }) else { return }
             let interval: Duration
             if chooser.confirm.isEnabled {
-                chooser.confirm.press()
+                guard press(answer), press(chooser.confirm) else { return }
                 interval = confirmRetryInterval
             } else {
+                // Shows the answer while confirm is still disabled.
+                if !answered {
+                    guard press(answer) else { return }
+                }
                 interval = pollInterval
             }
+            answered = true
             guard await sleep(for: interval, before: deadline) else { return }
         }
+    }
+
+    /// Every Accessibility read before a press can block, and a newer
+    /// `select` may cancel this watcher meanwhile; the chooser on screen
+    /// then belongs to another host, so a cancelled watcher never presses.
+    /// Returns `false` when cancelled.
+    private nonisolated static func press(_ node: any AXNode) -> Bool {
+        guard !Task.isCancelled else { return false }
+        node.press()
+        return true
     }
 
     /// Sleeps for `interval`, clipped to the deadline. Returns `false` when

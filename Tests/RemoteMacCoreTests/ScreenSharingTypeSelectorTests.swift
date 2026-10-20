@@ -34,11 +34,15 @@ private final class FakeNode: AXNode, @unchecked Sendable {
     var role: String? { lock.withLock { _role } }
     var children: [any AXNode] { lock.withLock { _children } }
 
+    /// The rule runs outside the lock so it may block, standing in for an
+    /// Accessibility round trip that stalls, without freezing the test's
+    /// reads of `pressCount`.
     var isEnabled: Bool {
-        lock.withLock {
+        let (read, rule) = lock.withLock {
             defer { _enabledReads += 1 }
-            return _isEnabledRule(_enabledReads)
+            return (_enabledReads, _isEnabledRule)
         }
+        return rule(read)
     }
 
     var enabledReads: Int { lock.withLock { _enabledReads } }
@@ -74,6 +78,32 @@ private final class FakeSource: ScreenSharingWindowSource, @unchecked Sendable {
     func remove(_ window: any AXNode) {
         lock.withLock { _windows.removeAll { $0.id == window.id } }
     }
+}
+
+/// Holds one thread inside a call until the test lets it go, so a test can
+/// act (e.g. start a newer `select`) while the watcher is mid-step.
+private final class Gate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _entered = false
+    private let released = DispatchSemaphore(value: 0)
+
+    /// Called from the watcher's thread; never from the main actor.
+    func block() {
+        lock.withLock { _entered = true }
+        released.wait()
+    }
+
+    func release() { released.signal() }
+
+    @MainActor
+    func waitUntilEntered() async {
+        let start = ContinuousClock.now
+        while !lock.withLock({ _entered }), ContinuousClock.now - start < .seconds(5) {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+    }
+
+    var entered: Bool { lock.withLock { _entered } }
 }
 
 /// The measured Screen Sharing chooser shape: the labels live in
@@ -204,12 +234,16 @@ private func makeSelector(_ source: FakeSource, timeout: Duration) -> AXScreenSh
 
     #expect(chooser.confirm.enabledReads == 6)
     #expect(chooser.confirm.pressCount == 1)
-    #expect(chooser.highPerformance.pressCount == 1)
+    // Once on discovery, so the answer shows while confirm is disabled, and
+    // again right before the confirm press.
+    #expect(chooser.highPerformance.pressCount == 2)
+    #expect(chooser.standard.pressCount == 0)
 }
 
 /// The `AXEnabled` flag is not trustworthy on this dialog — Continue reports
 /// enabled while it is greyed out — so one press can be swallowed. The
-/// selector keeps pressing until the chooser actually goes away.
+/// selector keeps pressing until the chooser actually goes away, re-selecting
+/// the type before each press in case the radio press was swallowed too.
 @MainActor
 @Test func repressesConfirmUntilChooserCloses() async {
     let source = FakeSource()
@@ -221,7 +255,8 @@ private func makeSelector(_ source: FakeSource, timeout: Duration) -> AXScreenSh
     await selector.select(.highPerformance) { source.add(chooser.window) }.value
 
     #expect(chooser.confirm.pressCount == 2)
-    #expect(chooser.highPerformance.pressCount == 1)
+    #expect(chooser.highPerformance.pressCount == 2)
+    #expect(chooser.standard.pressCount == 0)
     #expect(ContinuousClock.now - start < longTimeout / 2)
 }
 
@@ -261,8 +296,43 @@ private func makeSelector(_ source: FakeSource, timeout: Duration) -> AXScreenSh
 
     #expect(ContinuousClock.now - start < longTimeout / 2)
     #expect(first.highPerformance.pressCount == 1)
+    #expect(first.standard.pressCount == 0)
     #expect(first.confirm.pressCount == 0)
     #expect(second.standard.pressCount == 1)
+    #expect(second.highPerformance.pressCount == 0)
+    #expect(second.confirm.pressCount == 1)
+}
+
+/// A superseded watcher can be stuck in an Accessibility read when the
+/// newer `select` cancels it. Whatever that read returns, the stale watcher
+/// must not press anything afterwards — its answer belongs to another host.
+@MainActor
+@Test func cancelledWatcherNeverPressesAfterAStalledRead() async {
+    let source = FakeSource()
+    let gate = Gate()
+    let first = Chooser(confirmEnabled: { read in
+        if read == 0 { gate.block() }
+        return true
+    })
+    first.closes(in: source)
+    let second = Chooser()
+    second.closes(in: source)
+    let selector = makeSelector(source, timeout: longTimeout)
+
+    let firstTask = selector.select(.highPerformance) { source.add(first.window) }
+    await gate.waitUntilEntered()
+    #expect(gate.entered)
+
+    let secondTask = selector.select(.standard) { source.add(second.window) }
+    gate.release()
+    await firstTask.value
+    await secondTask.value
+
+    #expect(first.highPerformance.pressCount == 0)
+    #expect(first.standard.pressCount == 0)
+    #expect(first.confirm.pressCount == 0)
+    #expect(second.standard.pressCount == 1)
+    #expect(second.highPerformance.pressCount == 0)
     #expect(second.confirm.pressCount == 1)
 }
 
@@ -277,6 +347,7 @@ private func makeSelector(_ source: FakeSource, timeout: Duration) -> AXScreenSh
     let elapsed = ContinuousClock.now - start
 
     #expect(chooser.highPerformance.pressCount == 1)
+    #expect(chooser.standard.pressCount == 0)
     #expect(chooser.confirm.pressCount == 0)
     #expect(elapsed >= shortTimeout)
     #expect(elapsed < shortTimeout + .seconds(3))
