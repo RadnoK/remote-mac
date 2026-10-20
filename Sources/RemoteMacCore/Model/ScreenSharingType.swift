@@ -9,6 +9,15 @@ public enum ScreenSharingTypePreference: String, Codable, CaseIterable, Sendable
     case highPerformance
     /// Leave the chooser alone and let the user pick.
     case ask
+
+    public var labelKey: LocKey {
+        switch self {
+        case .auto: .screenSharingTypeAuto
+        case .standard: .screenSharingTypeStandard
+        case .highPerformance: .screenSharingTypeHighPerformance
+        case .ask: .screenSharingTypeAsk
+        }
+    }
 }
 
 /// A concrete answer to the chooser.

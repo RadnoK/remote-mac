@@ -65,6 +65,11 @@ public enum LocKey: String, CaseIterable, Sendable {
     case settingsWarpClipboardHint = "settings.general.warp_clipboard_hint"
     case settingsTerminalAutomationHint = "settings.general.terminal_automation_hint"
     case settingsLaunchAtLoginError = "settings.general.launch_at_login_error"
+    case settingsScreenSharingSection = "settings.general.screen_sharing_section"
+    case settingsAutoSelectType = "settings.general.auto_select_type"
+    case settingsAutoSelectTypeHelp = "settings.general.auto_select_type_help"
+    case settingsAccessibilityGranted = "settings.general.accessibility_granted"
+    case settingsAccessibilityMissing = "settings.general.accessibility_missing"
     case settingsAppearanceSection = "settings.appearance.section"
     case settingsLanguage = "settings.appearance.language"
     case settingsLanguageSystem = "settings.appearance.language_system"
@@ -90,6 +95,14 @@ public enum LocKey: String, CaseIterable, Sendable {
     case settingsHostPortField = "settings.hosts.port_field"
     case settingsHostConnectionSection = "settings.hosts.connection_section"
     case settingsHostAppearanceSection = "settings.hosts.appearance_section"
+    case settingsHostScreenSharingType = "settings.hosts.screen_sharing_type"
+    case settingsHostScreenSharingTypeDisabled = "settings.hosts.screen_sharing_type_disabled"
+
+    // Screen Sharing type preference labels
+    case screenSharingTypeAuto = "screen_sharing_type.auto"
+    case screenSharingTypeStandard = "screen_sharing_type.standard"
+    case screenSharingTypeHighPerformance = "screen_sharing_type.high_performance"
+    case screenSharingTypeAsk = "screen_sharing_type.ask"
 
     // Settings — about
     case settingsAboutSection = "settings.about.section"
