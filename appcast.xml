@@ -3,13 +3,13 @@
     <channel>
         <title>RemoteMac</title>
         <item>
-            <title>1.0.0</title>
-            <pubDate>Sun, 06 Sep 2026 21:22:23 +0000</pubDate>
-            <sparkle:version>1</sparkle:version>
-            <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+            <title>1.1.0</title>
+            <pubDate>Wed, 21 Oct 2026 10:24:46 +0000</pubDate>
+            <sparkle:version>2</sparkle:version>
+            <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://github.com/radnok/remote-mac/releases/download/v1.0.0/RemoteMac-1.0.0.zip" length="2352199" type="application/octet-stream" sparkle:edSignature="ScccLYrmNEbvQaIBbj69fzd0aKd2LXLivLoQkD6au6AqsYwGQ9fg3xgPP4c90I6F9HbbYJ7zOWMwFiUeMhErDw=="/>
+            <enclosure url="https://github.com/radnok/remote-mac/releases/download/v1.1.0/RemoteMac-1.1.0.zip" length="2399322" type="application/octet-stream" sparkle:edSignature="xhTfW+6hB6PxJ4b0bw3pbD6Qbikqp0DJqKEMn+6IhjjXpOZpZ8C4/dZ/q6WltXm8RVAfzjZGpm9WLzaRffyEBA=="/>
         </item>
     </channel>
 </rss>
