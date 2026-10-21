@@ -249,6 +249,18 @@ struct MachinesSettingsTab: View {
                             text: screenSharingPortBinding(for: entry.host.id),
                             prompt: Text(String(RemoteMacCore.screenSharingPort))
                         )
+                        Picker(store.l10n(.settingsHostScreenSharingType),
+                               selection: screenSharingTypeBinding(for: entry.host.id)) {
+                            ForEach(ScreenSharingTypePreference.allCases, id: \.self) { preference in
+                                Text(store.l10n(preference.labelKey)).tag(preference)
+                            }
+                        }
+                        .disabled(!store.settings.autoSelectScreenSharingType)
+                        if !store.settings.autoSelectScreenSharingType {
+                            Text(store.l10n(.settingsHostScreenSharingTypeDisabled))
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
                     } header: {
                         Text(store.l10n(.settingsHostConnectionSection))
                     }
@@ -347,6 +359,21 @@ struct MachinesSettingsTab: View {
                     store.settings.screenSharingPorts.removeValue(forKey: hostID)
                 } else if let port = UInt16(trimmed) {
                     store.settings.screenSharingPorts[hostID] = port
+                }
+            }
+        )
+    }
+
+    /// `.auto` is the default — see `AppSettings.screenSharingType(for:)` — so
+    /// selecting it removes the per-host key rather than persisting it.
+    private func screenSharingTypeBinding(for hostID: String) -> Binding<ScreenSharingTypePreference> {
+        Binding(
+            get: { store.settings.screenSharingTypes[hostID] ?? .auto },
+            set: { newValue in
+                if newValue == .auto {
+                    store.settings.screenSharingTypes.removeValue(forKey: hostID)
+                } else {
+                    store.settings.screenSharingTypes[hostID] = newValue
                 }
             }
         )

@@ -48,7 +48,7 @@ private actor PortRecordingProbe: PortProbing {
 }
 
 private struct NoopLauncher: Launching {
-    func openScreenSharing(host: RemoteMacCore.Host) {}
+    func openScreenSharing(url: URL) {}
     func openFileSharing(host: RemoteMacCore.Host) {}
     func copyToClipboard(_ text: String) {}
     func execute(_ plan: LaunchPlan) -> Bool { true }
@@ -57,12 +57,88 @@ private struct NoopLauncher: Launching {
 }
 
 private struct FailingLauncher: Launching {
-    func openScreenSharing(host: RemoteMacCore.Host) {}
+    func openScreenSharing(url: URL) {}
     func openFileSharing(host: RemoteMacCore.Host) {}
     func copyToClipboard(_ text: String) {}
     func execute(_ plan: LaunchPlan) -> Bool { false }
     func isRunning(bundleIdentifier: String) -> Bool { false }
     func isInstalled(bundleIdentifier: String) -> Bool { true }
+}
+
+/// Captures the URLs `HostStore.connect` opens, so a test can prove each
+/// connect opens exactly one URL, whichever branch it takes. A class guarded
+/// by a lock keeps it `Sendable` for `Launching`.
+private final class RecordingLauncher: Launching, @unchecked Sendable {
+    private let lock = NSLock()
+    private var urls: [URL] = []
+    var openedURLs: [URL] { lock.withLock { urls } }
+
+    func openScreenSharing(url: URL) { lock.withLock { urls.append(url) } }
+    func openFileSharing(host: RemoteMacCore.Host) {}
+    func copyToClipboard(_ text: String) {}
+    func execute(_ plan: LaunchPlan) -> Bool { true }
+    func isRunning(bundleIdentifier: String) -> Bool { false }
+    func isInstalled(bundleIdentifier: String) -> Bool { true }
+}
+
+/// Records the requested type and runs `open` once, like the real selector
+/// does, then returns an already-finished task. Counts `cancel()` so a test
+/// can prove every connect supersedes a watcher left over from an earlier one.
+@MainActor
+private final class RecordingSelector: ScreenSharingTypeSelecting {
+    private(set) var selectedTypes: [ScreenSharingType] = []
+    private(set) var cancelCount = 0
+
+    func select(_ type: ScreenSharingType, opening open: () -> Void) -> Task<Void, Never> {
+        selectedTypes.append(type)
+        open()
+        return Task {}
+    }
+
+    func cancel() { cancelCount += 1 }
+}
+
+/// Records the `(server, port)` each lookup asked for, so a test can prove
+/// `connect` queries the Keychain for the host it is about to open.
+private final class StubAccountLookup: ScreenSharingAccountLookup, @unchecked Sendable {
+    struct Query: Equatable {
+        let server: String
+        let port: UInt16
+    }
+
+    private let lock = NSLock()
+    private var recorded: [Query] = []
+    var queries: [Query] { lock.withLock { recorded } }
+    let account: String?
+
+    init(account: String?) { self.account = account }
+
+    func account(forServer server: String, port: UInt16) -> String? {
+        lock.withLock { recorded.append(Query(server: server, port: port)) }
+        return account
+    }
+}
+
+private final class FakePermission: AccessibilityPermission, @unchecked Sendable {
+    private let lock = NSLock()
+    private let trusted: Bool
+    private var requests = 0
+    var requestCount: Int { lock.withLock { requests } }
+
+    init(trusted: Bool) { self.trusted = trusted }
+    var isTrusted: Bool { trusted }
+    func requestTrust() { lock.withLock { requests += 1 } }
+}
+
+private func connectHost(
+    isOnLocalNetwork: Bool = false,
+    preference: ScreenSharingTypePreference = .auto,
+    port: UInt16 = RemoteMacCore.screenSharingPort
+) -> RemoteMacCore.Host {
+    Host(
+        id: "nodekey:aaa", name: "mini", displayName: "Mini", ipv4: "100.64.10.1",
+        isOnline: true, source: .tailscale, screenSharingPort: port,
+        isOnLocalNetwork: isOnLocalNetwork, screenSharingType: preference)
 }
 
 private let twoMacsJSON = """
@@ -143,7 +219,10 @@ private func makeStore(
     runner: CommandRunning,
     probe: PortProbing,
     sshStatus: SSHStatusClient = SSHStatusClient(runner: FailingRunner(error: .timedOut)),
-    launcher: Launching = NoopLauncher()
+    launcher: Launching = NoopLauncher(),
+    accountLookup: ScreenSharingAccountLookup = StubAccountLookup(account: nil),
+    typeSelector: ScreenSharingTypeSelecting = RecordingSelector(),
+    accessibility: AccessibilityPermission = FakePermission(trusted: false)
 ) -> HostStore {
     let url = FileManager.default.temporaryDirectory
         .appendingPathComponent("remotemac-store-\(UUID().uuidString)")
@@ -153,7 +232,10 @@ private func makeStore(
         probe: probe,
         sshStatus: sshStatus,
         settingsStore: SettingsStore(fileURL: url),
-        launcher: launcher
+        launcher: launcher,
+        accountLookup: accountLookup,
+        typeSelector: typeSelector,
+        accessibility: accessibility
     )
 }
 
@@ -736,4 +818,160 @@ private func makeTestL10n() throws -> L10n {
 
     let unknown = HostEntry(host: subtitleHost, status: .unknown, details: stale)
     #expect(hostSubtitle(for: unknown, l10n: l10n) == "100.64.10.1 · Unknown")
+}
+
+@MainActor
+@Test func connectPutsKeychainAccountInURL() {
+    let launcher = RecordingLauncher()
+    let store = makeStore(
+        runner: StubRunner(json: oneMacJSON), probe: StubProbe(outcomes: [:]),
+        launcher: launcher, accountLookup: StubAccountLookup(account: "Jane Appleseed"))
+
+    store.connect(to: connectHost())
+
+    #expect(launcher.openedURLs.map(\.absoluteString) == ["vnc://Jane%20Appleseed@100.64.10.1"])
+}
+
+@MainActor
+@Test func connectLooksUpAccountForTheHostAddressAndPort() {
+    let lookup = StubAccountLookup(account: "Jane Appleseed")
+    let launcher = RecordingLauncher()
+    let store = makeStore(
+        runner: StubRunner(json: oneMacJSON), probe: StubProbe(outcomes: [:]),
+        launcher: launcher, accountLookup: lookup)
+
+    store.connect(to: connectHost(port: 5901))
+
+    #expect(lookup.queries == [.init(server: "100.64.10.1", port: 5901)])
+    #expect(launcher.openedURLs.map(\.absoluteString) == ["vnc://Jane%20Appleseed@100.64.10.1:5901"])
+}
+
+@MainActor
+@Test func connectWithoutAccountOpensPlainURL() {
+    let launcher = RecordingLauncher()
+    let store = makeStore(
+        runner: StubRunner(json: oneMacJSON), probe: StubProbe(outcomes: [:]),
+        launcher: launcher, accountLookup: StubAccountLookup(account: nil))
+
+    store.connect(to: connectHost())
+
+    #expect(launcher.openedURLs.map(\.absoluteString) == ["vnc://100.64.10.1"])
+}
+
+@MainActor
+@Test(arguments: [
+    (ScreenSharingTypePreference.auto, true, ScreenSharingType?.some(.highPerformance)),
+    (.auto, false, .some(.standard)),
+    (.standard, true, .some(.standard)),
+    (.standard, false, .some(.standard)),
+    (.highPerformance, true, .some(.highPerformance)),
+    (.highPerformance, false, .some(.highPerformance)),
+    (.ask, true, .none),
+    (.ask, false, .none),
+])
+func connectSelectsTypePerPreferenceAndNetwork(
+    preference: ScreenSharingTypePreference, onLAN: Bool, expected: ScreenSharingType?
+) {
+    let launcher = RecordingLauncher()
+    let selector = RecordingSelector()
+    let store = makeStore(
+        runner: StubRunner(json: oneMacJSON), probe: StubProbe(outcomes: [:]),
+        launcher: launcher, typeSelector: selector,
+        accessibility: FakePermission(trusted: true))
+    store.settings.autoSelectScreenSharingType = true
+    let host = connectHost(isOnLocalNetwork: onLAN, preference: preference)
+    store.settings.screenSharingTypes[host.id] = preference
+
+    store.connect(to: host)
+
+    #expect(selector.selectedTypes == (expected.map { [$0] } ?? []))
+    #expect(selector.cancelCount == 1)
+    #expect(launcher.openedURLs.count == 1)
+}
+
+/// The per-Mac type is read from settings at connect time, so a `Host`
+/// snapshot taken before the user changed it must not win.
+@MainActor
+@Test func connectResolvesTypeFromLiveSettingsNotTheHostSnapshot() {
+    let selector = RecordingSelector()
+    let launcher = RecordingLauncher()
+    let store = makeStore(
+        runner: StubRunner(json: oneMacJSON), probe: StubProbe(outcomes: [:]),
+        launcher: launcher, typeSelector: selector,
+        accessibility: FakePermission(trusted: true))
+    store.settings.autoSelectScreenSharingType = true
+    let host = connectHost(preference: .auto)
+    store.settings.screenSharingTypes[host.id] = .standard
+
+    store.connect(to: host)
+
+    #expect(selector.selectedTypes == [.standard])
+    #expect(launcher.openedURLs.count == 1)
+}
+
+/// `.ask` opens the URL directly, but a watcher left over from an earlier
+/// auto connect must still be cancelled or it would answer this chooser.
+@MainActor
+@Test func connectAskCancelsPendingWatcherWithoutSelecting() {
+    let selector = RecordingSelector()
+    let launcher = RecordingLauncher()
+    let store = makeStore(
+        runner: StubRunner(json: oneMacJSON), probe: StubProbe(outcomes: [:]),
+        launcher: launcher, typeSelector: selector,
+        accessibility: FakePermission(trusted: true))
+    store.settings.autoSelectScreenSharingType = true
+    let host = connectHost(preference: .ask)
+    store.settings.screenSharingTypes[host.id] = .ask
+
+    store.connect(to: host)
+
+    #expect(selector.cancelCount == 1)
+    #expect(selector.selectedTypes.isEmpty)
+    #expect(launcher.openedURLs.count == 1)
+}
+
+@MainActor
+@Test func connectSkipsSelectorWhenToggleOff() {
+    let launcher = RecordingLauncher()
+    let selector = RecordingSelector()
+    let store = makeStore(
+        runner: StubRunner(json: oneMacJSON), probe: StubProbe(outcomes: [:]),
+        launcher: launcher, typeSelector: selector,
+        accessibility: FakePermission(trusted: true))
+    store.settings.autoSelectScreenSharingType = false
+
+    store.connect(to: connectHost())
+
+    #expect(selector.selectedTypes.isEmpty)
+    #expect(selector.cancelCount == 1)
+    #expect(launcher.openedURLs.count == 1)
+}
+
+@MainActor
+@Test func connectSkipsSelectorWhenNotTrusted() {
+    let launcher = RecordingLauncher()
+    let selector = RecordingSelector()
+    let store = makeStore(
+        runner: StubRunner(json: oneMacJSON), probe: StubProbe(outcomes: [:]),
+        launcher: launcher, typeSelector: selector,
+        accessibility: FakePermission(trusted: false))
+    store.settings.autoSelectScreenSharingType = true
+
+    store.connect(to: connectHost())
+
+    #expect(selector.selectedTypes.isEmpty)
+    #expect(launcher.openedURLs.count == 1)
+}
+
+@MainActor
+@Test func requestAccessibilityTrustForwardsToPermission() {
+    let permission = FakePermission(trusted: false)
+    let store = makeStore(
+        runner: StubRunner(json: oneMacJSON), probe: StubProbe(outcomes: [:]),
+        accessibility: permission)
+
+    #expect(!store.isAccessibilityTrusted)
+    store.requestAccessibilityTrust()
+
+    #expect(permission.requestCount == 1)
 }

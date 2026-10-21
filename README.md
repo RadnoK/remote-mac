@@ -39,6 +39,11 @@ user, and choose the interface language:
 - **Status at a glance** — a dot per device: available, sharing off, offline,
   or not found.
 - **One-click Screen Sharing** — opens macOS's built-in Screen Sharing app.
+- **No password prompt** — reuses the password Screen Sharing remembered in
+  your Keychain.
+- **Automatic connection type** (opt-in, needs Accessibility) — High
+  Performance on the same local network, Standard elsewhere, overridable per
+  Mac.
 - **SSH in your terminal** — Ghostty, iTerm2, Terminal, or Warp; only the
   ones actually installed on your Mac show up as options.
 - **Copy IP / open SMB** — quick actions for when you need the raw address or

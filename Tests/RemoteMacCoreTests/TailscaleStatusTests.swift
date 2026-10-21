@@ -152,7 +152,7 @@ private let realisticJSON = """
     "HostName": "The Tailscale GUI failed to start Server",
     "DNSName": "weird-host.tailnet-1234.ts.net.",
     "OS": "macOS",
-    "TailscaleIPs": ["100.99.88.77"],
+    "TailscaleIPs": ["100.64.88.77"],
     "Online": true
   },
   "Peer": null
@@ -162,7 +162,7 @@ private let realisticJSON = """
     #expect(hosts.count == 1)
     let host = try #require(hosts.first)
     #expect(host.displayName == "The Tailscale GUI failed to start Server")
-    #expect(host.ipv4 == "100.99.88.77")
+    #expect(host.ipv4 == "100.64.88.77")
 }
 
 @Test func absentBackendStateIsMalformed() {
@@ -172,4 +172,58 @@ private let realisticJSON = """
     #expect(throws: TailscaleParseError.malformed) {
         try parseTailscaleStatus(Data(json.utf8))
     }
+}
+
+/// `CurAddr` is the physical endpoint of a direct path; it is empty when the
+/// connection is relayed or idle, and the key can be absent altogether.
+@Test func curAddrDecidesLocalNetwork() throws {
+    let json = #"""
+{
+  "BackendState": "Running",
+  "Self": null,
+  "Peer": {
+    "nodekey:lan": {
+      "PublicKey": "nodekey:lan",
+      "HostName": "lan-mac",
+      "DNSName": "lan-mac.tailnet-1234.ts.net.",
+      "OS": "macOS",
+      "TailscaleIPs": ["100.64.20.1"],
+      "Online": true,
+      "CurAddr": "192.168.1.20:41641"
+    },
+    "nodekey:wan": {
+      "PublicKey": "nodekey:wan",
+      "HostName": "wan-mac",
+      "DNSName": "wan-mac.tailnet-1234.ts.net.",
+      "OS": "macOS",
+      "TailscaleIPs": ["100.64.20.2"],
+      "Online": true,
+      "CurAddr": "203.0.113.7:41641"
+    },
+    "nodekey:relay": {
+      "PublicKey": "nodekey:relay",
+      "HostName": "relay-mac",
+      "DNSName": "relay-mac.tailnet-1234.ts.net.",
+      "OS": "macOS",
+      "TailscaleIPs": ["100.64.20.3"],
+      "Online": true,
+      "CurAddr": ""
+    },
+    "nodekey:idle": {
+      "PublicKey": "nodekey:idle",
+      "HostName": "idle-mac",
+      "DNSName": "idle-mac.tailnet-1234.ts.net.",
+      "OS": "macOS",
+      "TailscaleIPs": ["100.64.20.4"],
+      "Online": true
+    }
+  }
+}
+"""#
+    let hosts = try parseTailscaleStatus(Data(json.utf8))
+    #expect(hosts.count == 4)
+    #expect(try #require(hosts.first { $0.name == "lan-mac" }).isOnLocalNetwork == true)
+    #expect(try #require(hosts.first { $0.name == "wan-mac" }).isOnLocalNetwork == false)
+    #expect(try #require(hosts.first { $0.name == "relay-mac" }).isOnLocalNetwork == false)
+    #expect(try #require(hosts.first { $0.name == "idle-mac" }).isOnLocalNetwork == false)
 }

@@ -2,6 +2,15 @@
 
 All notable changes to RemoteMac are documented here.
 
+## Unreleased
+
+### Added
+
+- No password prompt — reuses the password Screen Sharing remembered in your
+  Keychain.
+- Automatic connection type (opt-in, needs Accessibility) — High Performance
+  on the same local network, Standard elsewhere, overridable per Mac.
+
 ## 1.0.0 — 2026-09-06
 
 First public release.

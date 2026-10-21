@@ -128,3 +128,32 @@ private func tailscaleHost(_ name: String, _ ip: String, id: String? = nil) -> H
     let merged = mergeHosts(tailscale: [tailscaleHost("mini", "100.64.10.1")], settings: .default)
     #expect(merged[0].screenSharingPort == RemoteMacCore.screenSharingPort)
 }
+
+/// A manual host has no Tailscale `CurAddr`, so its own address is the only
+/// evidence of where it lives: a private address means the same LAN, a public
+/// address or a hostname does not.
+@Test func manualHostLocalityFollowsItsAddress() {
+    var settings = AppSettings.default
+    settings.manualHosts = [
+        ManualHost(name: "lan", address: "192.168.1.50"),
+        ManualHost(name: "wan", address: "203.0.113.9"),
+        ManualHost(name: "named", address: "mini.local"),
+    ]
+
+    let merged = mergeHosts(tailscale: [], settings: settings)
+    #expect(merged.first { $0.name == "lan" }?.isOnLocalNetwork == true)
+    #expect(merged.first { $0.name == "wan" }?.isOnLocalNetwork == false)
+    #expect(merged.first { $0.name == "named" }?.isOnLocalNetwork == false)
+}
+
+@Test func mergeResolvesScreenSharingType() {
+    var settings = AppSettings.default
+    settings.screenSharingTypes = ["nodekey:mini": .highPerformance]
+
+    let merged = mergeHosts(
+        tailscale: [tailscaleHost("mini", "100.64.10.1"), tailscaleHost("mbp", "100.64.10.2")],
+        settings: settings
+    )
+    #expect(merged.first { $0.name == "mini" }?.screenSharingType == .highPerformance)
+    #expect(merged.first { $0.name == "mbp" }?.screenSharingType == .auto)
+}

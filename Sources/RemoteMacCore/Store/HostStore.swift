@@ -102,19 +102,28 @@ public final class HostStore {
     /// on the main actor — that isolation, not the conformance, is what makes
     /// this safe.
     private let launcher: Launching
+    private let accountLookup: ScreenSharingAccountLookup
+    private let typeSelector: ScreenSharingTypeSelecting
+    private let accessibility: AccessibilityPermission
 
     public init(
         tailscale: TailscaleClient = TailscaleClient(),
         probe: PortProbing = NetworkPortProbe(),
         sshStatus: SSHStatusClient = SSHStatusClient(),
         settingsStore: SettingsStore = SettingsStore(),
-        launcher: Launching = AppKitLauncher()
+        launcher: Launching = AppKitLauncher(),
+        accountLookup: ScreenSharingAccountLookup = KeychainScreenSharingAccountLookup(),
+        typeSelector: ScreenSharingTypeSelecting? = nil,
+        accessibility: AccessibilityPermission = SystemAccessibilityPermission()
     ) {
         self.tailscale = tailscale
         self.probe = probe
         self.sshStatus = sshStatus
         self.settingsStore = settingsStore
         self.launcher = launcher
+        self.accountLookup = accountLookup
+        self.typeSelector = typeSelector ?? AXScreenSharingTypeSelector()
+        self.accessibility = accessibility
         let loadedSettings = settingsStore.load()
         self.settings = loadedSettings
         self.l10n = L10n(language: loadedSettings.language)
@@ -231,8 +240,39 @@ public final class HostStore {
         pollingTask = nil
     }
 
+    /// Opens Screen Sharing for `host`, carrying the account Screen Sharing
+    /// remembered so it reuses its stored password. When auto-select is on
+    /// and Accessibility is trusted, the type selector opens the URL itself
+    /// so it can ignore windows that already existed; every other path opens
+    /// the URL directly. The URL is opened exactly once either way.
+    ///
+    /// Any in-flight watcher is cancelled first, on every path: a watcher
+    /// left polling from an earlier connect would otherwise answer this
+    /// connect's chooser with the earlier Mac's type, including when this
+    /// connect does not auto-select at all.
     public func connect(to host: Host) {
-        launcher.openScreenSharing(host: host)
+        typeSelector.cancel()
+        let account = accountLookup.account(forServer: host.ipv4, port: host.screenSharingPort)
+        guard let url = screenSharingURL(for: host, account: account) else { return }
+        let launcher = self.launcher
+        let open: () -> Void = { launcher.openScreenSharing(url: url) }
+        // Read live like the toggle: `host` may be a snapshot from before the
+        // user changed this Mac's type in Settings.
+        if settings.autoSelectScreenSharingType, accessibility.isTrusted,
+           let type = resolveScreenSharingType(
+               preference: settings.screenSharingType(for: host),
+               isOnLocalNetwork: host.isOnLocalNetwork)
+        {
+            typeSelector.select(type, opening: open)
+        } else {
+            open()
+        }
+    }
+
+    public var isAccessibilityTrusted: Bool { accessibility.isTrusted }
+
+    public func requestAccessibilityTrust() {
+        accessibility.requestTrust()
     }
 
     public func openSSH(to host: Host) {

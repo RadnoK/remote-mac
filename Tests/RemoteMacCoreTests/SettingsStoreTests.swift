@@ -148,3 +148,79 @@ private func makeTempURL() -> URL {
 
     try? FileManager.default.removeItem(at: url.deletingLastPathComponent())
 }
+
+/// The Screen Sharing type keys were added after `AppSettings` shipped: a file
+/// written by an older build has neither, and must keep every other saved
+/// setting while the feature stays off.
+@Test func preFeatureSettingsDecodeWithDefaults() throws {
+    let url = makeTempURL()
+    try FileManager.default.createDirectory(
+        at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+    let json = """
+    {
+      "terminal": "iterm",
+      "defaultSSHUsername": "alex",
+      "sshUsernames": {"nodekey:aaa": "admin"},
+      "manualHosts": [{"name": "biuro", "address": "192.168.1.50"}],
+      "hiddenHostIDs": ["nodekey:bbb"],
+      "displayNameOverrides": {"nodekey:aaa": "Office Mac"},
+      "screenSharingPorts": {"nodekey:aaa": 5901},
+      "language": "pl"
+    }
+    """
+    try Data(json.utf8).write(to: url)
+
+    let loaded = SettingsStore(fileURL: url).load()
+    #expect(loaded.autoSelectScreenSharingType == false)
+    #expect(loaded.screenSharingTypes == [:])
+    #expect(loaded.terminal == .iterm)
+    #expect(loaded.defaultSSHUsername == "alex")
+    #expect(loaded.sshUsernames == ["nodekey:aaa": "admin"])
+    #expect(loaded.hiddenHostIDs == ["nodekey:bbb"])
+    #expect(loaded.displayNameOverrides == ["nodekey:aaa": "Office Mac"])
+    #expect(loaded.screenSharingPorts == ["nodekey:aaa": 5901])
+
+    try? FileManager.default.removeItem(at: url.deletingLastPathComponent())
+}
+
+/// A value this build does not know (hand-edited, or written by a newer build)
+/// must drop only that entry, not the whole file.
+@Test func unknownScreenSharingTypeValueIsDropped() throws {
+    let url = makeTempURL()
+    try FileManager.default.createDirectory(
+        at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+    let json = """
+    {
+      "terminal": "iterm",
+      "defaultSSHUsername": "alex",
+      "sshUsernames": {},
+      "manualHosts": [],
+      "hiddenHostIDs": [],
+      "screenSharingTypes": {"a": "highPerformance", "b": "turbo"}
+    }
+    """
+    try Data(json.utf8).write(to: url)
+
+    let loaded = SettingsStore(fileURL: url).load()
+    #expect(loaded.screenSharingTypes == ["a": .highPerformance])
+    #expect(loaded.terminal == .iterm)
+    #expect(loaded.defaultSSHUsername == "alex")
+
+    try? FileManager.default.removeItem(at: url.deletingLastPathComponent())
+}
+
+@Test func screenSharingSettingsRoundTrip() throws {
+    let url = makeTempURL()
+    let store = SettingsStore(fileURL: url)
+    var settings = AppSettings.default
+    settings.autoSelectScreenSharingType = true
+    settings.screenSharingTypes = ["nodekey:aaa": .standard, "nodekey:bbb": .ask]
+
+    try store.save(settings)
+    let loaded = store.load()
+    #expect(loaded == settings)
+    #expect(loaded.autoSelectScreenSharingType == true)
+    #expect(loaded.screenSharingTypes == ["nodekey:aaa": .standard, "nodekey:bbb": .ask])
+
+    try? FileManager.default.removeItem(at: url.deletingLastPathComponent())
+}

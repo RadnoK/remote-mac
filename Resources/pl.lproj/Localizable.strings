@@ -59,6 +59,11 @@
 "settings.general.warp_clipboard_hint" = "Warp nie pozwala uruchomić komendy automatycznie. Komenda trafi do schowka — wklej ją przez ⌘V.";
 "settings.general.terminal_automation_hint" = "Terminal wymaga zgody na automatyzację. macOS zapyta o nią przy pierwszym użyciu.";
 "settings.general.launch_at_login_error" = "Nie udało się zmienić ustawienia uruchamiania przy logowaniu. Ta funkcja wymaga podpisanej wersji aplikacji — jeśli używasz wersji deweloperskiej lub cofnięto zgodę w Ustawieniach systemowych, przełącznik nie zadziała.";
+"settings.general.screen_sharing_section" = "Udostępnianie ekranu";
+"settings.general.auto_select_type" = "Automatycznie wybieraj tryb udostępniania ekranu";
+"settings.general.auto_select_type_help" = "High Performance w tej samej sieci lokalnej, Standard w pozostałych. Wymaga uprawnienia Dostępność.";
+"settings.general.accessibility_granted" = "Uprawnienie Dostępność: przyznane";
+"settings.general.accessibility_missing" = "Uprawnienie Dostępność: brak";
 "settings.appearance.section" = "Wygląd";
 "settings.appearance.language" = "Język";
 "settings.appearance.language_system" = "Systemowy";
@@ -84,6 +89,14 @@
 "settings.hosts.port_field" = "Port Screen Sharing";
 "settings.hosts.connection_section" = "Połączenie";
 "settings.hosts.appearance_section" = "Wyświetlanie";
+"settings.hosts.screen_sharing_type" = "Tryb udostępniania ekranu";
+"settings.hosts.screen_sharing_type_disabled" = "Włącz automatyczny wybór trybu w zakładce Ogólne, aby z tego korzystać.";
+
+/* Typ udostępniania ekranu — etykiety */
+"screen_sharing_type.auto" = "Automatycznie";
+"screen_sharing_type.standard" = "Standard";
+"screen_sharing_type.high_performance" = "High Performance";
+"screen_sharing_type.ask" = "Pytaj za każdym razem";
 
 /* Ustawienia — o aplikacji */
 "settings.about.section" = "O aplikacji";

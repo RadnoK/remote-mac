@@ -1,3 +1,4 @@
+import AppKit
 import RemoteMacCore
 import SwiftUI
 
@@ -6,6 +7,11 @@ import SwiftUI
 struct GeneralSettingsTab: View {
     @Bindable var store: HostStore
     @State private var loginState = LoginItem.current
+    @State private var trusted = false
+
+    /// Deep link to System Settings → Privacy & Security → Accessibility.
+    private static let accessibilitySettingsURL =
+        URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
 
     var body: some View {
         Form {
@@ -67,6 +73,32 @@ struct GeneralSettingsTab: View {
             }
 
             Section {
+                Toggle(store.l10n(.settingsAutoSelectType), isOn: Binding(
+                    get: { store.settings.autoSelectScreenSharingType },
+                    set: { enabled in
+                        store.settings.autoSelectScreenSharingType = enabled
+                        if enabled {
+                            store.requestAccessibilityTrust()
+                        }
+                        trusted = store.isAccessibilityTrusted
+                    }
+                ))
+                .help(store.l10n(.settingsAutoSelectTypeHelp))
+
+                Text(store.l10n(trusted ? .settingsAccessibilityGranted : .settingsAccessibilityMissing))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+
+                if !trusted, let url = Self.accessibilitySettingsURL {
+                    Button(store.l10n(.settingsOpenSystemSettings)) {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+            } header: {
+                Text(store.l10n(.settingsScreenSharingSection))
+            }
+
+            Section {
                 Picker(store.l10n(.settingsLanguage), selection: $store.settings.language) {
                     Text(store.l10n(.settingsLanguageSystem)).tag(AppLanguage.system)
                     Text(store.l10n(.settingsLanguagePolish)).tag(AppLanguage.pl)
@@ -81,6 +113,11 @@ struct GeneralSettingsTab: View {
             // The user may have removed the app from Login Items while this
             // window was closed.
             loginState = LoginItem.current
+        }
+        .onAppear { trusted = store.isAccessibilityTrusted }
+        // The user grants the permission in System Settings, then comes back.
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
+            trusted = store.isAccessibilityTrusted
         }
     }
 }

@@ -8,7 +8,7 @@ private let mini = Host(id: "1", name: "studio-mac-mini", displayName: "Mac mini
 private struct FakeLauncher: Launching {
     let installed: Set<String>
 
-    func openScreenSharing(host: RemoteMacCore.Host) {}
+    func openScreenSharing(url: URL) {}
     func openFileSharing(host: RemoteMacCore.Host) {}
     func copyToClipboard(_ text: String) {}
     func execute(_ plan: LaunchPlan) -> Bool { true }
@@ -17,14 +17,14 @@ private struct FakeLauncher: Launching {
 }
 
 @Test func screenSharingURLUsesVNCScheme() {
-    let url = try? #require(screenSharingURL(for: mini))
+    let url = try? #require(screenSharingURL(for: mini, account: nil))
     #expect(url?.scheme == "vnc")
     #expect(url?.host == "100.64.10.1")
 }
 
-@Test func screenSharingURLOmitsCredentials() {
+@Test func screenSharingURLWithoutAccountOmitsCredentials() {
     // Passwords stay in the macOS Keychain; they never go into the URL.
-    let url = screenSharingURL(for: mini)
+    let url = screenSharingURL(for: mini, account: nil)
     #expect(url?.user == nil)
     #expect(url?.password == nil)
     #expect(url?.absoluteString.contains("@") == false)
@@ -41,7 +41,7 @@ private struct FakeLauncher: Launching {
 /// ":5900" the moment per-host ports shipped.
 @Test func screenSharingURLOmitsTheDefaultPort() {
     #expect(mini.screenSharingPort == screenSharingPort)
-    let url = screenSharingURL(for: mini)
+    let url = screenSharingURL(for: mini, account: nil)
     #expect(url?.absoluteString == "vnc://100.64.10.1")
     #expect(url?.port == nil)
 }
@@ -54,9 +54,38 @@ private struct FakeLauncher: Launching {
     let custom = Host(id: "1", name: "studio-mac-mini", displayName: "Mac mini",
                       ipv4: "100.64.10.1", isOnline: true, source: .tailscale,
                       screenSharingPort: 5901)
-    let url = screenSharingURL(for: custom)
+    let url = screenSharingURL(for: custom, account: nil)
     #expect(url?.port == 5901)
     #expect(url?.absoluteString == "vnc://100.64.10.1:5901")
+}
+
+@Test func accountIsAddedToURL() {
+    let url = screenSharingURL(for: mini, account: "Jane Appleseed")
+    #expect(url?.absoluteString == "vnc://Jane%20Appleseed@100.64.10.1")
+}
+
+/// An unencoded "@", ":" or "/" in the account would shift where the URL's
+/// userinfo ends and the host begins.
+@Test func reservedCharactersInAccountAreEncoded() {
+    let url = screenSharingURL(for: mini, account: "a@b:c/d")
+    #expect(url?.absoluteString == "vnc://a%40b%3Ac%2Fd@100.64.10.1")
+}
+
+@Test func nonASCIIAccountIsUTF8Encoded() {
+    let url = screenSharingURL(for: mini, account: "Paweł")
+    #expect(url?.absoluteString == "vnc://Pawe%C5%82@100.64.10.1")
+}
+
+@Test func accountAndCustomPortCombine() {
+    let custom = Host(id: "1", name: "studio-mac-mini", displayName: "Mac mini",
+                      ipv4: "100.64.10.1", isOnline: true, source: .tailscale,
+                      screenSharingPort: 5901)
+    let url = screenSharingURL(for: custom, account: "Jane Appleseed")
+    #expect(url?.absoluteString == "vnc://Jane%20Appleseed@100.64.10.1:5901")
+}
+
+@Test func emptyAccountIsTreatedAsAbsent() {
+    #expect(screenSharingURL(for: mini, account: "")?.absoluteString == "vnc://100.64.10.1")
 }
 
 @Test func installedTerminalsFiltersToWhatIsPresent() {
