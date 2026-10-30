@@ -2,6 +2,12 @@
 
 All notable changes to RemoteMac are documented here.
 
+## 1.1.1 — 2026-10-30
+
+### Fixed
+
+- Clicking a Mac in the menu now works on macOS 27 (it did nothing before).
+
 ## 1.1.0 — 2026-10-21
 
 ### Added
