@@ -1,6 +1,8 @@
 name: Release
 
 # Tags vX.Y.Z only — secrets are never available to PRs from forks.
+# A tag with a suffix (v1.2.0-beta.1) is a prerelease: GitHub prerelease,
+# remote-mac@beta cask, and no appcast — Sparkle only ever offers stable.
 on:
   push:
     tags:
@@ -21,7 +23,14 @@ jobs:
 
       - name: Determine version from tag
         id: ver
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [[ "$VERSION" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Check version matches Info.plist
         run: |
@@ -107,12 +116,15 @@ jobs:
             echo "Release already exists — replacing the artifact"
             gh release upload "$GITHUB_REF_NAME" "$ZIP" --clobber
           else
+            FLAGS=()
+            [[ "${{ steps.ver.outputs.prerelease }}" == "true" ]] && FLAGS+=(--prerelease)
             gh release create "$GITHUB_REF_NAME" "$ZIP" \
               --title "RemoteMac ${{ steps.ver.outputs.version }}" \
-              --generate-notes
+              --generate-notes "${FLAGS[@]}"
           fi
 
       - name: Publish appcast to gh-pages
+        if: steps.ver.outputs.prerelease == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -130,22 +142,40 @@ jobs:
             git -C "$RUNNER_TEMP/ghp" push origin gh-pages
           fi
 
-      - name: Update cask in the tap
+      # A beta updates only remote-mac@beta. A stable release updates both,
+      # so the beta channel always points at whichever build is newest.
+      - name: Update casks in the tap
         env:
           GH_TOKEN: ${{ secrets.TAP_TOKEN }}
           VERSION: ${{ steps.ver.outputs.version }}
+          PRERELEASE: ${{ steps.ver.outputs.prerelease }}
         run: |
           SHA="$(shasum -a 256 "dist/RemoteMac-$VERSION.zip" | awk '{print $1}')"
           git clone "https://x-access-token:$GH_TOKEN@github.com/RadnoK/homebrew-tap.git" \
             "$RUNNER_TEMP/tap"
           cd "$RUNNER_TEMP/tap"
-          sed -i '' "s|^  version .*|  version \"$VERSION\"|" Casks/remote-mac.rb
-          sed -i '' "s|^  sha256 .*|  sha256 \"$SHA\"|" Casks/remote-mac.rb
+
+          BETA=Casks/remote-mac@beta.rb
+          if [[ ! -f "$BETA" ]]; then
+            sed -e 's|^cask "remote-mac" do|cask "remote-mac@beta" do|' \
+              -e 's|^  name "RemoteMac"|  name "RemoteMac Beta"|' \
+              Casks/remote-mac.rb \
+              | awk '{ print } /^  auto_updates true/ { print ""; print "  conflicts_with cask: \"remote-mac\"" }' \
+              > "$BETA"
+          fi
+
+          CASKS=("$BETA")
+          [[ "$PRERELEASE" == "false" ]] && CASKS+=(Casks/remote-mac.rb)
+          for CASK in "${CASKS[@]}"; do
+            sed -i '' "s|^  version .*|  version \"$VERSION\"|" "$CASK"
+            sed -i '' "s|^  sha256 .*|  sha256 \"$SHA\"|" "$CASK"
+          done
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Casks/remote-mac.rb
+          git add Casks
           if git diff --cached --quiet; then
-            echo "Cask already up to date — nothing to do"
+            echo "Casks already up to date — nothing to do"
           else
             git commit -m "chore: remote-mac $VERSION"
             git push origin main
