@@ -34,6 +34,7 @@ public enum LocKey: String, CaseIterable, Sendable {
     case rowOpenFiles = "row.open_files"
     case rowCopyAddress = "row.copy_address"
     case rowCopyAddressCopied = "row.copy_address_copied"
+    case rowSwitchMonitor = "row.switch_monitor"
 
     // Status labels (HostStatus.label)
     case statusUnknown = "status.unknown"
@@ -97,6 +98,9 @@ public enum LocKey: String, CaseIterable, Sendable {
     case settingsHostAppearanceSection = "settings.hosts.appearance_section"
     case settingsHostScreenSharingType = "settings.hosts.screen_sharing_type"
     case settingsHostScreenSharingTypeDisabled = "settings.hosts.screen_sharing_type_disabled"
+    case settingsHostMonitorSection = "settings.hosts.monitor_section"
+    case settingsHostMonitorInputField = "settings.hosts.monitor_input_field"
+    case settingsHostMonitorInputHelp = "settings.hosts.monitor_input_help"
 
     // Screen Sharing type preference labels
     case screenSharingTypeAuto = "screen_sharing_type.auto"
@@ -136,6 +140,9 @@ public enum LocKey: String, CaseIterable, Sendable {
     case errorLaunchFailed = "error.launch_failed"
     /// Takes one argument: the terminal's display name.
     case errorLaunchFailedAutomation = "error.launch_failed_automation"
+    case errorMonitorSwitchFailed = "error.monitor_switch_failed"
+    /// Takes one argument: the comma-separated names of the Macs lacking m1ddc.
+    case errorMonitorToolMissing = "error.monitor_tool_missing"
 
     // Subtitle
     case subtitleLocked = "subtitle.locked"

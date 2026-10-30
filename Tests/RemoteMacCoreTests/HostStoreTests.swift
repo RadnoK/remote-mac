@@ -222,7 +222,8 @@ private func makeStore(
     launcher: Launching = NoopLauncher(),
     accountLookup: ScreenSharingAccountLookup = StubAccountLookup(account: nil),
     typeSelector: ScreenSharingTypeSelecting = RecordingSelector(),
-    accessibility: AccessibilityPermission = FakePermission(trusted: false)
+    accessibility: AccessibilityPermission = FakePermission(trusted: false),
+    monitorSwitch: MonitorSwitchClient = MonitorSwitchClient(runner: FailingRunner(error: .timedOut))
 ) -> HostStore {
     let url = FileManager.default.temporaryDirectory
         .appendingPathComponent("remotemac-store-\(UUID().uuidString)")
@@ -235,7 +236,8 @@ private func makeStore(
         launcher: launcher,
         accountLookup: accountLookup,
         typeSelector: typeSelector,
-        accessibility: accessibility
+        accessibility: accessibility,
+        monitorSwitch: monitorSwitch
     )
 }
 
@@ -974,4 +976,146 @@ func connectSelectsTypePerPreferenceAndNetwork(
     store.requestAccessibilityTrust()
 
     #expect(permission.requestCount == 1)
+}
+
+// MARK: - Monitor switch
+
+/// Answers each monitor-switch call with the output configured for its target
+/// — "local" for the in-process shell, otherwise the SSH destination's IP —
+/// and records which targets were contacted with which command.
+private final class MonitorRunner: CommandRunning, @unchecked Sendable {
+    private let lock = NSLock()
+    private var recorded: [String: String] = [:]
+    /// Target → the command it was sent.
+    var commands: [String: String] { lock.withLock { recorded } }
+    let outputs: [String: String]
+
+    init(outputs: [String: String]) { self.outputs = outputs }
+
+    func run(executable: String, arguments: [String],
+             environment: [String: String], timeout: Duration) async throws -> Data {
+        let target = executable == "/bin/sh"
+            ? "local"
+            : String(arguments[arguments.count - 2].split(separator: "@").last ?? "")
+        lock.withLock { recorded[target] = arguments.last ?? "" }
+        return Data((outputs[target] ?? "failed\n").utf8)
+    }
+}
+
+/// Mini (nodekey:aaa, 100.64.10.1) is the Tailscale Self node in
+/// `twoMacsJSON`, so it is the local Mac; MBP (nodekey:bbb) is remote.
+@MainActor
+private func makeMonitorStore(
+    outputs: [String: String],
+    inputs: [String: UInt8] = ["nodekey:aaa": 15, "nodekey:bbb": 27],
+    probe: [String: ProbeOutcome] = ["100.64.10.1": .listening, "100.64.10.2": .listening]
+) async -> (HostStore, MonitorRunner) {
+    let runner = MonitorRunner(outputs: outputs)
+    let store = makeStore(
+        runner: StubRunner(json: twoMacsJSON),
+        probe: StubProbe(outcomes: probe),
+        monitorSwitch: MonitorSwitchClient(runner: runner)
+    )
+    store.settings.defaultSSHUsername = "alex"
+    store.settings.monitorInputs = inputs
+    await store.refresh()
+    return (store, runner)
+}
+
+@MainActor
+private func host(_ name: String, in store: HostStore) -> RemoteMacCore.Host {
+    store.entries.first { $0.host.name == name }!.host
+}
+
+@MainActor
+@Test func switchMonitorSendsTheTargetsInputToEveryConfiguredMac() async {
+    let (store, runner) = await makeMonitorStore(outputs: ["local": "ok\n"])
+
+    let switched = await store.switchMonitor(to: host("mbp", in: store))
+
+    #expect(switched)
+    // Whichever Mac holds the monitor is the one that can switch it, so both
+    // get MBP's input, the local one in-process and the other over SSH.
+    #expect(runner.commands == [
+        "local": monitorSwitchCommand(input: 27),
+        "100.64.10.2": monitorSwitchCommand(input: 27),
+    ])
+}
+
+@MainActor
+@Test func switchMonitorSkipsMacsWithoutAnInput() async {
+    let (store, runner) = await makeMonitorStore(
+        outputs: ["local": "ok\n"], inputs: ["nodekey:aaa": 15])
+
+    _ = await store.switchMonitor(to: host("mini", in: store))
+
+    #expect(Set(runner.commands.keys) == ["local"])
+}
+
+@MainActor
+@Test func switchMonitorSkipsUnreachableRemoteMacs() async {
+    let (store, runner) = await makeMonitorStore(
+        outputs: ["local": "ok\n"],
+        probe: ["100.64.10.1": .listening, "100.64.10.2": .timedOut])
+
+    _ = await store.switchMonitor(to: host("mini", in: store))
+
+    #expect(Set(runner.commands.keys) == ["local"])
+}
+
+@MainActor
+@Test func switchMonitorReadsTheInputFromLiveSettings() async {
+    let (store, runner) = await makeMonitorStore(outputs: ["local": "ok\n"])
+    let snapshot = host("mbp", in: store)
+    store.settings.monitorInputs["nodekey:bbb"] = 18
+
+    _ = await store.switchMonitor(to: snapshot)
+
+    #expect(runner.commands["local"] == monitorSwitchCommand(input: 18))
+}
+
+@MainActor
+@Test func switchMonitorDoesNothingForAMacWithoutAnInput() async {
+    let (store, runner) = await makeMonitorStore(
+        outputs: ["local": "ok\n"], inputs: ["nodekey:aaa": 15])
+
+    let switched = await store.switchMonitor(to: host("mbp", in: store))
+
+    #expect(!switched)
+    #expect(runner.commands.isEmpty)
+}
+
+@MainActor
+@Test func switchMonitorReportsFailureWhenNoMacSwitched() async {
+    let (store, _) = await makeMonitorStore(outputs: [:])
+
+    let switched = await store.switchMonitor(to: host("mini", in: store))
+
+    #expect(!switched)
+    #expect(store.launchError == store.l10n(.errorMonitorSwitchFailed))
+}
+
+@MainActor
+@Test func switchMonitorNamesTheMacsMissingTheTool() async {
+    let (store, _) = await makeMonitorStore(outputs: ["local": "failed\n", "100.64.10.2": "missing\n"])
+
+    let switched = await store.switchMonitor(to: host("mini", in: store))
+
+    #expect(!switched)
+    #expect(store.launchError == store.l10n(.errorMonitorToolMissing, "MBP"))
+}
+
+@MainActor
+@Test func successfulSwitchClearsAnEarlierError() async {
+    // Only MBP can switch the monitor; with its input unset it is not asked.
+    let (store, _) = await makeMonitorStore(
+        outputs: ["100.64.10.2": "ok\n"], inputs: ["nodekey:aaa": 15])
+    _ = await store.switchMonitor(to: host("mini", in: store))
+    #expect(store.launchError != nil)
+
+    store.settings.monitorInputs["nodekey:bbb"] = 27
+    let switched = await store.switchMonitor(to: host("mini", in: store))
+
+    #expect(switched)
+    #expect(store.launchError == nil)
 }

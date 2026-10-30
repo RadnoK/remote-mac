@@ -2,6 +2,14 @@
 
 All notable changes to RemoteMac are documented here.
 
+## Unreleased
+
+### Added
+
+- Shared monitor switch — set each Mac's monitor input in Settings → Machines
+  and a button in its row switches the monitor to it over DDC. Needs `m1ddc`
+  on every Mac on the monitor.
+
 ## 1.1.1 — 2026-10-30
 
 ### Fixed

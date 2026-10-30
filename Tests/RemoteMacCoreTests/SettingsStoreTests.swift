@@ -224,3 +224,41 @@ private func makeTempURL() -> URL {
 
     try? FileManager.default.removeItem(at: url.deletingLastPathComponent())
 }
+
+/// `monitorInputs` was added after 1.1.0 shipped; a file without it must keep
+/// every other saved setting.
+@Test func settingsWithoutMonitorInputsStillDecode() throws {
+    let url = makeTempURL()
+    try FileManager.default.createDirectory(
+        at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+    let json = """
+    {
+      "terminal": "iterm",
+      "defaultSSHUsername": "alex",
+      "sshUsernames": {"nodekey:aaa": "admin"},
+      "manualHosts": [],
+      "hiddenHostIDs": [],
+      "screenSharingTypes": {"nodekey:aaa": "standard"}
+    }
+    """
+    try Data(json.utf8).write(to: url)
+
+    let loaded = SettingsStore(fileURL: url).load()
+    #expect(loaded.defaultSSHUsername == "alex")
+    #expect(loaded.screenSharingTypes == ["nodekey:aaa": .standard])
+    #expect(loaded.monitorInputs == [:])
+
+    try? FileManager.default.removeItem(at: url.deletingLastPathComponent())
+}
+
+@Test func roundTripsMonitorInputsThroughDisk() throws {
+    let url = makeTempURL()
+    let store = SettingsStore(fileURL: url)
+    var settings = AppSettings.default
+    settings.monitorInputs = ["nodekey:aaa": 15, "nodekey:bbb": 17]
+
+    try store.save(settings)
+    #expect(store.load() == settings)
+
+    try? FileManager.default.removeItem(at: url.deletingLastPathComponent())
+}

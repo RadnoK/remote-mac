@@ -105,6 +105,7 @@ public final class HostStore {
     private let accountLookup: ScreenSharingAccountLookup
     private let typeSelector: ScreenSharingTypeSelecting
     private let accessibility: AccessibilityPermission
+    private let monitorSwitch: MonitorSwitchClient
 
     public init(
         tailscale: TailscaleClient = TailscaleClient(),
@@ -114,7 +115,8 @@ public final class HostStore {
         launcher: Launching = AppKitLauncher(),
         accountLookup: ScreenSharingAccountLookup = KeychainScreenSharingAccountLookup(),
         typeSelector: ScreenSharingTypeSelecting? = nil,
-        accessibility: AccessibilityPermission = SystemAccessibilityPermission()
+        accessibility: AccessibilityPermission = SystemAccessibilityPermission(),
+        monitorSwitch: MonitorSwitchClient = MonitorSwitchClient()
     ) {
         self.tailscale = tailscale
         self.probe = probe
@@ -124,6 +126,7 @@ public final class HostStore {
         self.accountLookup = accountLookup
         self.typeSelector = typeSelector ?? AXScreenSharingTypeSelector()
         self.accessibility = accessibility
+        self.monitorSwitch = monitorSwitch
         let loadedSettings = settingsStore.load()
         self.settings = loadedSettings
         self.l10n = L10n(language: loadedSettings.language)
@@ -285,6 +288,43 @@ public final class HostStore {
         )
         let succeeded = launcher.execute(plan)
         launchError = succeeded ? nil : launchErrorMessage(for: terminal)
+    }
+
+    /// Switches the shared monitor to `host`'s input. Only the Mac the
+    /// monitor is showing can reach it over DDC, and this app does not know
+    /// which one that is, so the request goes through every reachable Mac
+    /// with an input set: this one in-process, the others over SSH. Returns
+    /// whether any of them switched it.
+    ///
+    /// Inputs are read from live settings, like `connect`'s type: `host` may
+    /// be a snapshot from before the user edited them.
+    public func switchMonitor(to host: Host) async -> Bool {
+        let inputs = settings.monitorInputs
+        guard let input = inputs[host.id] else { return false }
+        let senders = entries
+            .filter { inputs[$0.host.id] != nil }
+            .filter { $0.host.isLocal || ($0.status != .offline && $0.status != .notFound) }
+            .map(\.host)
+
+        let monitorSwitch = self.monitorSwitch
+        let outcomes = await withTaskGroup(of: (Host, MonitorSwitchOutcome).self) { group in
+            for sender in senders {
+                group.addTask { (sender, await monitorSwitch.switchInput(to: input, via: sender)) }
+            }
+            var results: [(Host, MonitorSwitchOutcome)] = []
+            for await result in group { results.append(result) }
+            return results
+        }
+
+        if outcomes.contains(where: { $0.1 == .switched }) {
+            launchError = nil
+            return true
+        }
+        let missing = outcomes.filter { $0.1 == .toolMissing }.map(\.0.displayName).sorted()
+        launchError = missing.isEmpty
+            ? l10n(.errorMonitorSwitchFailed)
+            : l10n(.errorMonitorToolMissing, missing.joined(separator: ", "))
+        return false
     }
 
     public func openFiles(for host: Host) {

@@ -28,6 +28,7 @@
 "row.open_files" = "Otwórz pliki (SMB)";
 "row.copy_address" = "Kopiuj adres IP";
 "row.copy_address_copied" = "Skopiowano!";
+"row.switch_monitor" = "Przełącz monitor na ten komputer";
 
 /* Etykiety statusu */
 "status.unknown" = "Nieznany";
@@ -91,6 +92,9 @@
 "settings.hosts.appearance_section" = "Wyświetlanie";
 "settings.hosts.screen_sharing_type" = "Tryb udostępniania ekranu";
 "settings.hosts.screen_sharing_type_disabled" = "Włącz automatyczny wybór trybu w zakładce Ogólne, aby z tego korzystać.";
+"settings.hosts.monitor_section" = "Monitor";
+"settings.hosts.monitor_input_field" = "Wejście monitora";
+"settings.hosts.monitor_input_help" = "Wejście, pod które ten Mac jest podpięty na wspólnym monitorze (DDC), np. 15 = DisplayPort 1, 17 = HDMI 1. Zostaw puste, jeśli nie jest podpięty do tego monitora. Wymaga m1ddc (brew install m1ddc) na każdym Macu podpiętym do monitora.";
 
 /* Typ udostępniania ekranu — etykiety */
 "screen_sharing_type.auto" = "Automatycznie";
@@ -126,6 +130,8 @@
 "error.settings_save_failed" = "Nie udało się zapisać ustawień.";
 "error.launch_failed" = "Nie udało się uruchomić %@.";
 "error.launch_failed_automation" = "Nie udało się uruchomić %@. Sprawdź uprawnienia automatyzacji w Ustawieniach systemowych → Prywatność i bezpieczeństwo → Automatyzacja.";
+"error.monitor_switch_failed" = "Nie udało się przełączyć monitora. Żaden podpięty do niego Mac nie dosięgnął go przez DDC.";
+"error.monitor_tool_missing" = "Nie udało się przełączyć monitora: brak m1ddc na: %@ (brew install m1ddc).";
 
 /* Podtytuł */
 "subtitle.locked" = "zablokowany";

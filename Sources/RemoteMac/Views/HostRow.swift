@@ -27,6 +27,19 @@ struct HostRow: View {
 
             Spacer(minLength: 8)
 
+            // Read live rather than from `entry.host.monitorInput`, so the
+            // button appears as soon as the input is set in Settings instead
+            // of after the next refresh.
+            if store.settings.monitorInputs[entry.host.id] != nil {
+                MonitorSwitchButton(
+                    help: store.l10n(.rowSwitchMonitor),
+                    onSwitch: { await store.switchMonitor(to: entry.host) }
+                )
+                .opacity(isHovered ? 1 : 0)
+                .frame(width: Self.trailingActionWidth)
+                .allowsHitTesting(isHovered)
+            }
+
             CopyIconButton(
                 text: entry.host.ipv4,
                 help: store.l10n(.rowCopyAddress),
@@ -59,6 +72,11 @@ struct HostRow: View {
             Button(store.l10n(.rowConnect)) { store.connect(to: entry.host) }
             Button(store.l10n(.rowOpenSSH)) { store.openSSH(to: entry.host) }
             Button(store.l10n(.rowOpenFiles)) { store.openFiles(for: entry.host) }
+            if store.settings.monitorInputs[entry.host.id] != nil {
+                Button(store.l10n(.rowSwitchMonitor)) {
+                    Task { await store.switchMonitor(to: entry.host) }
+                }
+            }
             Divider()
             Button(store.l10n(.rowCopyAddress)) { store.copyAddress(of: entry.host) }
         }
@@ -94,5 +112,42 @@ private struct CopyIconButton: View {
         }
         .buttonStyle(.borderless)
         .help(copied ? copiedHelp : help)
+    }
+}
+
+/// Same feedback idea as `CopyIconButton`: a spinner while the Macs answer
+/// (an SSH round-trip can take a few seconds), then a green checkmark or a
+/// red cross for ~1.5s. The reason for a failure goes to the menu's error
+/// banner through `HostStore.launchError`.
+private struct MonitorSwitchButton: View {
+    enum Phase { case idle, working, switched, failed }
+
+    let help: String
+    let onSwitch: () async -> Bool
+    @State private var phase = Phase.idle
+
+    var body: some View {
+        Button {
+            guard phase != .working else { return }
+            phase = .working
+            Task {
+                phase = await onSwitch() ? .switched : .failed
+                try? await Task.sleep(for: .seconds(1.5))
+                phase = .idle
+            }
+        } label: {
+            switch phase {
+            case .working:
+                ProgressView().controlSize(.mini)
+            case .switched:
+                Image(systemName: "checkmark").foregroundStyle(.green)
+            case .failed:
+                Image(systemName: "xmark").foregroundStyle(.red)
+            case .idle:
+                Image(systemName: "display").foregroundStyle(.secondary)
+            }
+        }
+        .buttonStyle(.borderless)
+        .help(help)
     }
 }

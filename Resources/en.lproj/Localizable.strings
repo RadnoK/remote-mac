@@ -28,6 +28,7 @@
 "row.open_files" = "Open Files (SMB)";
 "row.copy_address" = "Copy IP Address";
 "row.copy_address_copied" = "Copied!";
+"row.switch_monitor" = "Switch monitor to this Mac";
 
 /* Status labels */
 "status.unknown" = "Unknown";
@@ -91,6 +92,9 @@
 "settings.hosts.appearance_section" = "Display";
 "settings.hosts.screen_sharing_type" = "Screen Sharing type";
 "settings.hosts.screen_sharing_type_disabled" = "Turn on automatic type selection in General to use this.";
+"settings.hosts.monitor_section" = "Monitor";
+"settings.hosts.monitor_input_field" = "Monitor input";
+"settings.hosts.monitor_input_help" = "The input this Mac uses on the shared monitor (DDC), e.g. 15 = DisplayPort 1, 17 = HDMI 1. Leave empty if it is not on that monitor. Needs m1ddc (brew install m1ddc) on every Mac on the monitor.";
 
 /* Screen Sharing type preference labels */
 "screen_sharing_type.auto" = "Automatic";
@@ -126,6 +130,8 @@
 "error.settings_save_failed" = "Could not save settings.";
 "error.launch_failed" = "Could not launch %@.";
 "error.launch_failed_automation" = "Could not launch %@. Check automation permissions in System Settings → Privacy & Security → Automation.";
+"error.monitor_switch_failed" = "Could not switch the monitor. None of the Macs on it could reach it over DDC.";
+"error.monitor_tool_missing" = "Could not switch the monitor: m1ddc is not installed on %@ (brew install m1ddc).";
 
 /* Subtitle */
 "subtitle.locked" = "locked";

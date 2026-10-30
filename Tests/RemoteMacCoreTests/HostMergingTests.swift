@@ -157,3 +157,15 @@ private func tailscaleHost(_ name: String, _ ip: String, id: String? = nil) -> H
     #expect(merged.first { $0.name == "mini" }?.screenSharingType == .highPerformance)
     #expect(merged.first { $0.name == "mbp" }?.screenSharingType == .auto)
 }
+
+@Test func monitorInputsAreResolvedPerHost() {
+    var settings = AppSettings.default
+    settings.monitorInputs = ["nodekey:mini": 15]
+
+    let merged = mergeHosts(
+        tailscale: [tailscaleHost("mini", "100.64.10.1"), tailscaleHost("mbp", "100.64.10.2")],
+        settings: settings
+    )
+    #expect(merged.first { $0.name == "mini" }?.monitorInput == 15)
+    #expect(merged.first { $0.name == "mbp" }?.monitorInput == nil)
+}
