@@ -48,6 +48,11 @@ user, and choose the interface language:
   ones actually installed on your Mac show up as options.
 - **Copy IP / open SMB** — quick actions for when you need the raw address or
   a Finder connection instead.
+- **Shared monitor switch** — when several Macs sit on one monitor, set
+  each one's input in Settings → Machines and a button in its row switches
+  the monitor to it over DDC. Needs [`m1ddc`](https://github.com/waydabber/m1ddc)
+  (`brew install m1ddc`) on every Mac on the monitor and SSH key access to
+  the remote ones.
 - **Quick connect** — a Spotlight-style window to search and connect without
   touching the menu.
 - **Background refresh** — statuses update every 30 seconds, so the dots are
@@ -125,6 +130,10 @@ Screen Sharing keeps its own credentials in the macOS keychain.
 - **Warp can't be driven programmatically.** Its automation API refuses to
   submit commands, so for Warp, RemoteMac opens the app and copies the SSH
   command to your clipboard for you to paste.
+- **The monitor switch can only work through the Mac the monitor is
+  showing.** DDC does not reach a monitor from an inactive input, so
+  RemoteMac sends the request through every Mac with an input set and one of
+  them switches it. Apple Silicon only (`m1ddc`'s limit).
 - **Terminal.app needs an Automation permission the first time** you use it
   from RemoteMac (macOS will prompt for it). Ghostty and iTerm2 don't require
   any extra permission.

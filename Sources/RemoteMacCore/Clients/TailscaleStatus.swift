@@ -57,15 +57,16 @@ public func parseTailscaleStatus(_ data: Data) throws -> [Host] {
     guard let state = payload.BackendState else { throw TailscaleParseError.malformed }
     guard state == "Running" else { throw TailscaleParseError.notRunning(state) }
 
-    let nodes = [payload.`Self`].compactMap(\.self) + (payload.Peer?.values.map(\.self) ?? [])
+    let nodes = [payload.`Self`].compactMap { $0.map { ($0, true) } }
+        + (payload.Peer?.values.map { ($0, false) } ?? [])
 
     return nodes
-        .filter { $0.OS == macOSIdentifier }
-        .compactMap(makeHost)
+        .filter { node, _ in node.OS == macOSIdentifier }
+        .compactMap { node, isSelf in makeHost(node, isLocal: isSelf) }
         .sorted { $0.displayName < $1.displayName }
 }
 
-private func makeHost(_ node: Node) -> Host? {
+private func makeHost(_ node: Node, isLocal: Bool) -> Host? {
     guard let ipv4 = node.TailscaleIPs?.first(where: { !$0.contains(":") }) else {
         return nil
     }
@@ -78,7 +79,8 @@ private func makeHost(_ node: Node) -> Host? {
         ipv4: ipv4,
         isOnline: node.Online ?? false,
         source: .tailscale,
-        isOnLocalNetwork: node.CurAddr.map(isPrivateEndpoint) ?? false
+        isOnLocalNetwork: node.CurAddr.map(isPrivateEndpoint) ?? false,
+        isLocal: isLocal
     )
 }
 

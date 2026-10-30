@@ -227,3 +227,11 @@ private let realisticJSON = """
     #expect(try #require(hosts.first { $0.name == "relay-mac" }).isOnLocalNetwork == false)
     #expect(try #require(hosts.first { $0.name == "idle-mac" }).isOnLocalNetwork == false)
 }
+
+@Test func marksOnlyTheSelfNodeAsLocal() throws {
+    let hosts = try parseTailscaleStatus(Data(realisticJSON.utf8))
+    let local = hosts.filter(\.isLocal).map(\.name)
+    // A monitor switch aimed at this Mac runs in-process instead of over
+    // SSH, so exactly the Self node must carry the flag.
+    #expect(local == ["alex-macbook-pro"])
+}

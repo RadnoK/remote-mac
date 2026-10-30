@@ -38,6 +38,13 @@ public struct Host: Sendable, Identifiable, Hashable, Codable {
     /// How to answer Screen Sharing's Standard / High Performance chooser.
     /// Resolved by `mergeHosts` from `AppSettings.screenSharingTypes`.
     public var screenSharingType: ScreenSharingTypePreference
+    /// True for the Mac this app runs on (Tailscale's `Self` node), so work
+    /// aimed at it runs in-process instead of over SSH to itself.
+    public let isLocal: Bool
+    /// The value this Mac's input has on the shared monitor (VCP 0x60, e.g.
+    /// 15 for DisplayPort 1). Resolved by `mergeHosts` from
+    /// `AppSettings.monitorInputs`; nil means the Mac is not on it.
+    public var monitorInput: UInt8?
 
     public init(
         id: String,
@@ -49,7 +56,9 @@ public struct Host: Sendable, Identifiable, Hashable, Codable {
         sshUsername: String? = nil,
         screenSharingPort: UInt16 = RemoteMacCore.screenSharingPort,
         isOnLocalNetwork: Bool = false,
-        screenSharingType: ScreenSharingTypePreference = .auto
+        screenSharingType: ScreenSharingTypePreference = .auto,
+        isLocal: Bool = false,
+        monitorInput: UInt8? = nil
     ) {
         self.id = id
         self.name = name
@@ -61,5 +70,7 @@ public struct Host: Sendable, Identifiable, Hashable, Codable {
         self.screenSharingPort = screenSharingPort
         self.isOnLocalNetwork = isOnLocalNetwork
         self.screenSharingType = screenSharingType
+        self.isLocal = isLocal
+        self.monitorInput = monitorInput
     }
 }

@@ -32,6 +32,10 @@ public struct AppSettings: Sendable, Codable, Equatable {
     public var autoSelectScreenSharingType: Bool
     /// Host id → chooser preference. Absent means `.auto`.
     public var screenSharingTypes: [String: ScreenSharingTypePreference]
+    /// Host id → that Mac's input value on the shared monitor (VCP 0x60).
+    /// Every Mac with an entry is assumed to sit on the same monitor; absent
+    /// means the Mac is not on it and gets no switch button.
+    public var monitorInputs: [String: UInt8]
 
     public init(
         terminal: TerminalKind = .ghostty,
@@ -43,7 +47,8 @@ public struct AppSettings: Sendable, Codable, Equatable {
         screenSharingPorts: [String: UInt16] = [:],
         language: AppLanguage = .system,
         autoSelectScreenSharingType: Bool = false,
-        screenSharingTypes: [String: ScreenSharingTypePreference] = [:]
+        screenSharingTypes: [String: ScreenSharingTypePreference] = [:],
+        monitorInputs: [String: UInt8] = [:]
     ) {
         self.terminal = terminal
         self.defaultSSHUsername = defaultSSHUsername
@@ -55,6 +60,7 @@ public struct AppSettings: Sendable, Codable, Equatable {
         self.language = language
         self.autoSelectScreenSharingType = autoSelectScreenSharingType
         self.screenSharingTypes = screenSharingTypes
+        self.monitorInputs = monitorInputs
     }
 
     public static let `default` = AppSettings()
@@ -93,7 +99,7 @@ public struct AppSettings: Sendable, Codable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case terminal, defaultSSHUsername, sshUsernames, manualHosts, hiddenHostIDs
         case displayNameOverrides, screenSharingPorts, language
-        case autoSelectScreenSharingType, screenSharingTypes
+        case autoSelectScreenSharingType, screenSharingTypes, monitorInputs
     }
 
     /// `language` was added after `AppSettings` shipped, so a settings file
@@ -124,5 +130,7 @@ public struct AppSettings: Sendable, Codable, Equatable {
         screenSharingTypes = (try container.decodeIfPresent(
             [String: String].self, forKey: .screenSharingTypes) ?? [:])
             .compactMapValues(ScreenSharingTypePreference.init(rawValue:))
+        monitorInputs = try container.decodeIfPresent(
+            [String: UInt8].self, forKey: .monitorInputs) ?? [:]
     }
 }

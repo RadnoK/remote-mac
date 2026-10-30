@@ -264,6 +264,19 @@ struct MachinesSettingsTab: View {
                     } header: {
                         Text(store.l10n(.settingsHostConnectionSection))
                     }
+
+                    Section {
+                        TextField(
+                            store.l10n(.settingsHostMonitorInputField),
+                            text: monitorInputBinding(for: entry.host.id),
+                            prompt: Text("—")
+                        )
+                        Text(store.l10n(.settingsHostMonitorInputHelp))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    } header: {
+                        Text(store.l10n(.settingsHostMonitorSection))
+                    }
                 }
             }
             .formStyle(.grouped)
@@ -359,6 +372,25 @@ struct MachinesSettingsTab: View {
                     store.settings.screenSharingPorts.removeValue(forKey: hostID)
                 } else if let port = UInt16(trimmed) {
                     store.settings.screenSharingPorts[hostID] = port
+                }
+            }
+        )
+    }
+
+    /// Same text-field convention as the port: empty removes the key (the
+    /// Mac is not on the monitor), and only a value that fits a DDC input
+    /// byte is written.
+    private func monitorInputBinding(for hostID: String) -> Binding<String> {
+        Binding(
+            get: {
+                store.settings.monitorInputs[hostID].map(String.init) ?? ""
+            },
+            set: { newValue in
+                let trimmed = newValue.trimmingCharacters(in: .whitespaces)
+                if trimmed.isEmpty {
+                    store.settings.monitorInputs.removeValue(forKey: hostID)
+                } else if let input = UInt8(trimmed) {
+                    store.settings.monitorInputs[hostID] = input
                 }
             }
         )
