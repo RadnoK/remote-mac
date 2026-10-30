@@ -2,6 +2,17 @@
 
 All notable changes to RemoteMac are documented here.
 
+## 1.1.2 — 2026-10-30
+
+### Added
+
+- Update channel in Settings → Updates — pick Beta to get new features
+  before they are released.
+
+### Fixed
+
+- The menu is glass again on macOS 27 instead of a flat grey panel.
+
 ## 1.1.1 — 2026-10-30
 
 ### Fixed
