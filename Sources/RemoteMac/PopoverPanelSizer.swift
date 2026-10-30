@@ -40,50 +40,51 @@ struct PopoverPanelSizer: NSViewRepresentable {
         view.refit()
     }
 
-    final class TrackerView: NSView {
-        override func viewDidMoveToWindow() {
-            super.viewDidMoveToWindow()
-            installBackdrop()
-            refit()
-        }
-
-        /// Clears the panel's opaque fill and slots an `NSVisualEffectView`
-        /// under the content. `.menu` is the thinnest of the popover
-        /// materials — the desktop reads through it, which is the point.
-        ///
-        /// Idempotent: `viewDidMoveToWindow` fires again whenever the panel
-        /// is rebuilt, and a second effect view would stack another wash of
-        /// tint over the first.
-        private func installBackdrop() {
-            guard let window = self.window,
-                  let content = window.contentView else { return }
-            window.isOpaque = false
-            window.backgroundColor = .clear
-            guard !content.subviews.contains(where: { $0 is Backdrop }) else { return }
-            let backdrop = Backdrop()
-            backdrop.material = .menu
-            backdrop.blendingMode = .behindWindow
+    /// Doubles as the panel's translucent backdrop. It has to be this view,
+    /// placed by SwiftUI's own `.background`, rather than an effect view
+    /// slotted into the window's content view by hand: on macOS 27 that
+    /// content view is a tree of real AppKit views whose order SwiftUI owns,
+    /// and a foreign subview ended up on top of it — covering the rows
+    /// (an empty grey panel) and taking every click, so clicking a Mac did
+    /// nothing.
+    final class TrackerView: NSVisualEffectView {
+        override init(frame frameRect: NSRect) {
+            super.init(frame: frameRect)
+            // `.menu` is the thinnest of the popover materials — the desktop
+            // reads through it, which is the point.
+            material = .menu
+            blendingMode = .behindWindow
             // .active, not .followsWindowActiveState: the panel resigns key
             // as soon as the user clicks another app, and a backdrop that
             // goes solid grey on the way out is the bug we came to fix.
-            backdrop.state = .active
-            backdrop.autoresizingMask = [.width, .height]
-            backdrop.frame = content.bounds
+            state = .active
             // Clipped to the panel's own corners — clearing the window drops
             // the system's rounding, leaving the material square at the tips.
-            backdrop.wantsLayer = true
-            backdrop.layer?.cornerRadius = Self.cornerRadius
-            backdrop.layer?.cornerCurve = .continuous
-            backdrop.layer?.masksToBounds = true
-            content.addSubview(backdrop, positioned: .below, relativeTo: nil)
+            wantsLayer = true
+            layer?.cornerRadius = Self.cornerRadius
+            layer?.cornerCurve = .continuous
+            layer?.masksToBounds = true
+        }
+
+        @available(*, unavailable)
+        required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+        /// A background never takes a click: the rows and buttons above it
+        /// handle their own, and a hit here would swallow theirs.
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            // Without this the panel's own opaque fill hides the material.
+            if let window {
+                window.isOpaque = false
+                window.backgroundColor = .clear
+            }
+            refit()
         }
 
         /// Matches the panel rounding `MenuBarExtra(.window)` draws itself.
         static let cornerRadius: CGFloat = 11
-
-        /// A marker class, so the idempotence check cannot mistake some other
-        /// effect view SwiftUI may park in the panel for ours.
-        final class Backdrop: NSVisualEffectView {}
 
         func refit() {
             // After the in-flight layout pass — fittingSize is stale before it.

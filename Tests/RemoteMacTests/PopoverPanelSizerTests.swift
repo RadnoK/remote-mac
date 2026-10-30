@@ -46,4 +46,18 @@ struct PopoverPanelSizerTests {
         #expect(PopoverPanelSizer.fittedFrame(for: Self.tall, fittingHeight: 0) == nil)
         #expect(PopoverPanelSizer.fittedFrame(for: Self.tall, fittingHeight: -50) == nil)
     }
+
+    /// On macOS 27 the menu's SwiftUI content is a tree of real AppKit
+    /// views whose order SwiftUI owns, so a backdrop slotted into the
+    /// hosting view by hand ended up on top of it: it covered the rows and
+    /// took every click, and clicking a Mac did nothing. The tracker now is
+    /// the backdrop, placed by SwiftUI's own `.background`, and must stay
+    /// out of hit-testing so clicks reach the rows above it.
+    @Test func trackerIsTheBackdropAndLetsClicksThrough() {
+        let tracker = PopoverPanelSizer.TrackerView()
+        tracker.frame = NSRect(x: 0, y: 0, width: 320, height: 200)
+        #expect((tracker as NSView) is NSVisualEffectView)
+        #expect(tracker.material == .menu)
+        #expect(tracker.hitTest(NSPoint(x: 160, y: 100)) == nil)
+    }
 }
