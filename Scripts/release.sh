@@ -70,6 +70,21 @@ ditto -c -k --keepParent "$APP" "$ZIP"
 echo "==> Gatekeeper verification"
 spctl -a -vvv -t install "$APP"
 
+SHA="$(shasum -a 256 "$ZIP" | awk '{print $1}')"
+
+if [[ "$VERSION" == *-* ]]; then
+  # A prerelease never enters the appcast: Sparkle would offer it to every
+  # stable user. Beta testers install it through the remote-mac@beta cask.
+  echo
+  echo "==> Done (prerelease, no appcast)"
+  echo "    file:    $ZIP"
+  echo "    sha256:  $SHA"
+  echo
+  echo "Next:"
+  echo "  gh release create v$VERSION \"$ZIP\" --title \"RemoteMac $VERSION\" --generate-notes --prerelease"
+  exit 0
+fi
+
 echo "==> Appcast for Sparkle"
 # generate_appcast reads the whole directory and signs with the EdDSA key from
 # the keychain. It must run after stapling, so it covers the ZIP with the
@@ -98,7 +113,6 @@ else
     --download-url-prefix "$URL_PREFIX" "$APPCAST_DIR"
 fi
 
-SHA="$(shasum -a 256 "$ZIP" | awk '{print $1}')"
 echo
 echo "==> Done"
 echo "    file:    $ZIP"
