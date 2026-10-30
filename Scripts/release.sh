@@ -14,7 +14,14 @@ APP="$DIST/$APP_NAME.app"
 ZIP="$DIST/RemoteMac-$VERSION.zip"
 KEYCHAIN_PROFILE="${KEYCHAIN_PROFILE:-remotemac-notary}"
 SPARKLE_BIN="${SPARKLE_BIN:-$HOME/.local/sparkle/bin}"
-APPCAST_DIR="$DIST/appcast"
+# A prerelease gets its own appcast (published as appcast-beta.xml), so a
+# beta zip never lands in the stable feed. generate_appcast lists every zip
+# in its directory, hence one directory per channel.
+if [[ "$VERSION" == *-* ]]; then
+  APPCAST_DIR="$DIST/appcast-beta"
+else
+  APPCAST_DIR="$DIST/appcast"
+fi
 
 echo "==> Build + Developer ID signature"
 ./Scripts/build-app.sh "$APP"
@@ -70,21 +77,6 @@ ditto -c -k --keepParent "$APP" "$ZIP"
 echo "==> Gatekeeper verification"
 spctl -a -vvv -t install "$APP"
 
-SHA="$(shasum -a 256 "$ZIP" | awk '{print $1}')"
-
-if [[ "$VERSION" == *-* ]]; then
-  # A prerelease never enters the appcast: Sparkle would offer it to every
-  # stable user. Beta testers install it through the remote-mac@beta cask.
-  echo
-  echo "==> Done (prerelease, no appcast)"
-  echo "    file:    $ZIP"
-  echo "    sha256:  $SHA"
-  echo
-  echo "Next:"
-  echo "  gh release create v$VERSION \"$ZIP\" --title \"RemoteMac $VERSION\" --generate-notes --prerelease"
-  exit 0
-fi
-
 echo "==> Appcast for Sparkle"
 # generate_appcast reads the whole directory and signs with the EdDSA key from
 # the keychain. It must run after stapling, so it covers the ZIP with the
@@ -113,6 +105,7 @@ else
     --download-url-prefix "$URL_PREFIX" "$APPCAST_DIR"
 fi
 
+SHA="$(shasum -a 256 "$ZIP" | awk '{print $1}')"
 echo
 echo "==> Done"
 echo "    file:    $ZIP"
@@ -121,5 +114,5 @@ echo "    appcast: $APPCAST_DIR/appcast.xml"
 echo
 echo "Next:"
 echo "  1. gh release create v$VERSION \"$ZIP\" --title \"RemoteMac $VERSION\" --generate-notes"
-echo "  2. publish $APPCAST_DIR/appcast.xml at the URL in SUFeedURL (Resources/Info.plist)"
-echo "     — e.g. commit it to the gh-pages branch if that's how it's served"
+echo "  2. publish $APPCAST_DIR/appcast.xml on gh-pages: a beta as appcast-beta.xml,"
+echo "     a stable release as both appcast.xml and appcast-beta.xml"

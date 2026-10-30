@@ -2,7 +2,7 @@ name: Release
 
 # Tags vX.Y.Z only — secrets are never available to PRs from forks.
 # A tag with a suffix (v1.2.0-beta.1) is a prerelease: GitHub prerelease,
-# remote-mac@beta cask, and no appcast — Sparkle only ever offers stable.
+# appcast-beta.xml only (the app's Beta channel), remote-mac@beta cask only.
 on:
   push:
     tags:
@@ -37,6 +37,20 @@ jobs:
           PLIST_VER="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)"
           if [[ "$PLIST_VER" != "${{ steps.ver.outputs.version }}" ]]; then
             echo "::error::Tag ${{ steps.ver.outputs.version }} != Info.plist $PLIST_VER"
+            exit 1
+          fi
+
+      # The SDK decides which AppKit the app gets on newer macOS, so take the
+      # newest Xcode on the runner and refuse anything older than SDK 26.
+      - name: Select latest Xcode
+        run: |
+          LATEST="$(ls -d /Applications/Xcode_*.app 2>/dev/null | grep -v -i beta | sort -V | tail -1)"
+          if [[ -n "$LATEST" ]]; then sudo xcode-select -s "$LATEST"; fi
+          xcodebuild -version
+          SDK="$(xcrun --sdk macosx --show-sdk-version)"
+          echo "macOS SDK: $SDK"
+          if [[ "${SDK%%.*}" -lt 26 ]]; then
+            echo "::error::macOS SDK $SDK is too old, need 26+"
             exit 1
           fi
 
@@ -123,22 +137,29 @@ jobs:
               --generate-notes "${FLAGS[@]}"
           fi
 
+      # Stable goes to both feeds, so beta testers get stable releases too;
+      # a beta goes to appcast-beta.xml only.
       - name: Publish appcast to gh-pages
-        if: steps.ver.outputs.prerelease == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.ver.outputs.version }}
+          PRERELEASE: ${{ steps.ver.outputs.prerelease }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin gh-pages
           git worktree add "$RUNNER_TEMP/ghp" gh-pages
-          cp dist/appcast/appcast.xml "$RUNNER_TEMP/ghp/appcast.xml"
-          git -C "$RUNNER_TEMP/ghp" add appcast.xml
+          if [[ "$PRERELEASE" == "true" ]]; then
+            cp dist/appcast-beta/appcast.xml "$RUNNER_TEMP/ghp/appcast-beta.xml"
+          else
+            cp dist/appcast/appcast.xml "$RUNNER_TEMP/ghp/appcast.xml"
+            cp dist/appcast/appcast.xml "$RUNNER_TEMP/ghp/appcast-beta.xml"
+          fi
+          git -C "$RUNNER_TEMP/ghp" add appcast.xml appcast-beta.xml
           if git -C "$RUNNER_TEMP/ghp" diff --cached --quiet; then
             echo "Appcast unchanged"
           else
-            git -C "$RUNNER_TEMP/ghp" commit \
-              -m "chore: appcast for ${{ steps.ver.outputs.version }}"
+            git -C "$RUNNER_TEMP/ghp" commit -m "chore: appcast for $VERSION"
             git -C "$RUNNER_TEMP/ghp" push origin gh-pages
           fi
 

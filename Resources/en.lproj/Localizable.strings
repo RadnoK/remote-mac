@@ -114,6 +114,10 @@
 "settings.updates.frequency_weekly" = "Weekly";
 "settings.updates.auto_download" = "Download and install automatically";
 "settings.updates.check_now" = "Check Now";
+"settings.updates.channel" = "Channel";
+"settings.updates.channel_stable" = "Stable";
+"settings.updates.channel_beta" = "Beta";
+"settings.updates.channel_footer" = "Beta gets new features before they are released, and stable releases too. Switching back to Stable keeps the beta until the next stable release.";
 "settings.updates.never_checked" = "Never checked";
 "settings.updates.last_checked" = "Checked %@";
 

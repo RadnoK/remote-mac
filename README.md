@@ -69,14 +69,12 @@ user, and choose the interface language:
 brew install --cask radnok/tap/remote-mac
 ```
 
-Betas (signed and notarized, but not offered through auto-update):
+Betas: pick the Beta channel in Settings → Updates, or install the beta cask
+(it conflicts with `remote-mac`, so uninstall that first):
 
 ```bash
 brew install --cask radnok/tap/remote-mac@beta
 ```
-
-The two casks conflict — `brew uninstall --cask remote-mac` first. Once a
-stable release catches up, the beta cask points at it too.
 
 Or grab the `.zip` from
 [Releases](https://github.com/radnok/remote-mac/releases) and drag
@@ -138,8 +136,8 @@ Maintainers only. Pushing a `vX.Y.Z` tag runs
 builds, signs, notarizes, publishes a GitHub release, updates the
 [Sparkle](https://sparkle-project.org) appcast on `gh-pages`, and bumps the
 Homebrew cask. A tag with a suffix (`v1.2.0-beta.1`) becomes a GitHub
-prerelease that only updates the `remote-mac@beta` cask and stays out of the
-appcast. `Scripts/release.sh <version>` does the same thing locally.
+prerelease that only updates the beta feed (`appcast-beta.xml`) and the
+`remote-mac@beta` cask. `Scripts/release.sh <version>` does the same thing locally.
 
 Both need credentials that are not in this repo — a Developer ID certificate,
 notarization credentials, and the Sparkle signing key.

@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import RemoteMacCore
 import Sparkle
 
 /// Wraps Sparkle for the settings UI.
@@ -8,20 +9,27 @@ import Sparkle
 /// we deliberately do not mirror them in `AppSettings`, to avoid two sources
 /// of truth drifting apart.
 ///
+/// The update channel sits in the same UserDefaults, and this class is
+/// Sparkle's delegate so it can answer `feedURLString(for:)` with the
+/// channel's appcast — a switch takes effect on the next check, no relaunch.
+///
 /// Ported from RouterMenu's `UpdaterController`.
 @MainActor
 @Observable
-public final class UpdaterController {
-    private let controller: SPUStandardUpdaterController
+public final class UpdaterController: NSObject, SPUUpdaterDelegate {
+    @ObservationIgnored private var controller: SPUStandardUpdaterController!
+    @ObservationIgnored private let defaults: UserDefaults
 
     /// Bumped after a settings change so the view recomputes properties
     /// read directly from Sparkle.
     private var revision = 0
 
-    public init() {
+    public init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        super.init()
         controller = SPUStandardUpdaterController(
             startingUpdater: true,
-            updaterDelegate: nil,
+            updaterDelegate: self,
             userDriverDelegate: nil
         )
     }
@@ -70,6 +78,27 @@ public final class UpdaterController {
     public var canCheckForUpdates: Bool {
         _ = revision
         return updater.canCheckForUpdates
+    }
+
+    /// The release stream this install follows. Switching checks straight
+    /// away, so the user sees the effect instead of waiting for the schedule.
+    public var channel: UpdateChannel {
+        get {
+            _ = revision
+            return UpdateChannel(storedValue: defaults.string(forKey: UpdateChannel.defaultsKey))
+        }
+        set {
+            guard newValue != channel else { return }
+            defaults.set(newValue.rawValue, forKey: UpdateChannel.defaultsKey)
+            revision += 1
+            checkForUpdates()
+        }
+    }
+
+    /// Sparkle's delegate protocol is main-actor, so reading defaults here
+    /// is safe.
+    public func feedURLString(for updater: SPUUpdater) -> String? {
+        channel.appcastURL.absoluteString
     }
 
     /// Manual check — shows Sparkle's UI even when there is no new version.

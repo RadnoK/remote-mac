@@ -6,14 +6,18 @@ Pushing a `v*.*.*` tag runs `.github/workflows/release.yml`. Nothing else
 publishes; never build a zip by hand for testers.
 
 - **Stable** — `vX.Y.Z`: build, Developer ID signature, notarization, GitHub
-  release, Sparkle appcast on `gh-pages`, and both casks in
-  `RadnoK/homebrew-tap` (`remote-mac` and `remote-mac@beta`).
+  release, both Sparkle feeds on `gh-pages` (`appcast.xml` and
+  `appcast-beta.xml`), and both casks in `RadnoK/homebrew-tap`
+  (`remote-mac` and `remote-mac@beta`).
 - **Beta** — `vX.Y.Z-beta.N` (any suffix after `-`): same build and
-  notarization, but a GitHub *prerelease*, no appcast (Sparkle must never
-  offer a beta to stable users), and only the `remote-mac@beta` cask is
-  updated. Testers install it with
-  `brew install --cask radnok/tap/remote-mac@beta` (conflicts with
-  `remote-mac`, uninstall that first).
+  notarization, but a GitHub *prerelease*, only `appcast-beta.xml` and only
+  the `remote-mac@beta` cask. Users get betas by picking the Beta channel in
+  Settings → Updates (`UpdateChannel`, served through
+  `UpdaterController.feedURLString(for:)`), no CLI needed.
+
+Each feed holds just the latest release, and Sparkle compares build numbers.
+So a stable hotfix cut during a beta cycle replaces the beta in
+`appcast-beta.xml` (its build is higher): cut a fresh beta right after it.
 
 The tag must match `Resources/Info.plist`, or the workflow fails:
 
@@ -40,6 +44,10 @@ the tap, and the second push can be rejected.
 
 ## Environment
 
+- The release workflow picks the newest non-beta Xcode on the runner and
+  fails below SDK 26. The panel's look depends on the OS more than the SDK:
+  from macOS 27 the system draws the menu panel's glass itself, so
+  `PopoverPanelSizer` draws its own backdrop only below 27.
 - `gh` and `brew` live in `/opt/homebrew/bin`, which may not be on `PATH`.
 - Tests: `swift test`. CI runs only `--filter RemoteMacCoreTests`, because
   `RemoteMacTests` needs a window server; run the full suite locally.

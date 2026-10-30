@@ -50,14 +50,25 @@ struct PopoverPanelSizerTests {
     /// On macOS 27 the menu's SwiftUI content is a tree of real AppKit
     /// views whose order SwiftUI owns, so a backdrop slotted into the
     /// hosting view by hand ended up on top of it: it covered the rows and
-    /// took every click, and clicking a Mac did nothing. The tracker now is
-    /// the backdrop, placed by SwiftUI's own `.background`, and must stay
-    /// out of hit-testing so clicks reach the rows above it.
-    @Test func trackerIsTheBackdropAndLetsClicksThrough() {
+    /// took every click, and clicking a Mac did nothing. The tracker,
+    /// placed by SwiftUI's own `.background`, must stay out of hit-testing
+    /// so clicks reach the rows above it.
+    @Test func trackerLetsClicksThrough() {
         let tracker = PopoverPanelSizer.TrackerView()
         tracker.frame = NSRect(x: 0, y: 0, width: 320, height: 200)
-        #expect((tracker as NSView) is NSVisualEffectView)
-        #expect(tracker.material == .menu)
         #expect(tracker.hitTest(NSPoint(x: 160, y: 100)) == nil)
+    }
+
+    /// macOS 27 draws glass behind the panel itself; our `.menu` material
+    /// on top of it turned the panel flat grey.
+    @Test func backdropOnlyBeforeMacOS27() {
+        #expect(PopoverPanelSizer.drawsBackdrop(
+            on: OperatingSystemVersion(majorVersion: 15, minorVersion: 7, patchVersion: 0)))
+        #expect(PopoverPanelSizer.drawsBackdrop(
+            on: OperatingSystemVersion(majorVersion: 26, minorVersion: 6, patchVersion: 0)))
+        #expect(!PopoverPanelSizer.drawsBackdrop(
+            on: OperatingSystemVersion(majorVersion: 27, minorVersion: 0, patchVersion: 0)))
+        #expect(!PopoverPanelSizer.drawsBackdrop(
+            on: OperatingSystemVersion(majorVersion: 28, minorVersion: 0, patchVersion: 0)))
     }
 }

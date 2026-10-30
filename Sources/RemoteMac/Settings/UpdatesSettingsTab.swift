@@ -17,6 +17,17 @@ struct UpdatesSettingsTab: View {
             }
 
             Section {
+                Picker(store.l10n(.settingsChannel), selection: $updater.channel) {
+                    ForEach(UpdateChannel.allCases, id: \.self) { channel in
+                        Text(store.l10n(channel.labelKey)).tag(channel)
+                    }
+                }
+            } footer: {
+                Text(store.l10n(.settingsChannelFooter))
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
                 Toggle(store.l10n(.settingsAutoCheck), isOn: $updater.automaticallyChecksForUpdates)
                 if updater.automaticallyChecksForUpdates {
                     Picker(store.l10n(.settingsFrequency), selection: $updater.updateCheckInterval) {

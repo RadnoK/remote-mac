@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 /// Snaps the menu bar panel back to its content's height, and gives it a
-/// translucent background.
+/// translucent background up to macOS 26.
 ///
 /// `MenuBarExtra(.window)` grows the panel when tall content appears but
 /// never shrinks it again (observed on macOS 26): reopened on the short
@@ -34,6 +34,17 @@ struct PopoverPanelSizer: NSViewRepresentable {
         return fitted
     }
 
+    /// Whether the panel needs our backdrop at all. macOS 27 draws its own
+    /// glass behind `MenuBarExtra(.window)` — for builds against the 26 and
+    /// 27 SDKs alike — and a cleared window with a `.menu` material on top
+    /// turns that glass into a flat grey sheet. So from 27 on, the panel's
+    /// look is left to the system and this view only re-fits the height.
+    nonisolated static func drawsBackdrop(on version: OperatingSystemVersion) -> Bool {
+        version.majorVersion < 27
+    }
+
+    static let drawsBackdrop = drawsBackdrop(on: ProcessInfo.processInfo.operatingSystemVersion)
+
     func makeNSView(context: Context) -> TrackerView { TrackerView() }
 
     func updateNSView(_ view: TrackerView, context: Context) {
@@ -50,6 +61,12 @@ struct PopoverPanelSizer: NSViewRepresentable {
     final class TrackerView: NSVisualEffectView {
         override init(frame frameRect: NSRect) {
             super.init(frame: frameRect)
+            // On macOS 27 the view stays in place for `refit()`, but hidden:
+            // the system's glass is the backdrop there.
+            guard PopoverPanelSizer.drawsBackdrop else {
+                isHidden = true
+                return
+            }
             // `.menu` is the thinnest of the popover materials — the desktop
             // reads through it, which is the point.
             material = .menu
@@ -76,7 +93,7 @@ struct PopoverPanelSizer: NSViewRepresentable {
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
             // Without this the panel's own opaque fill hides the material.
-            if let window {
+            if PopoverPanelSizer.drawsBackdrop, let window {
                 window.isOpaque = false
                 window.backgroundColor = .clear
             }

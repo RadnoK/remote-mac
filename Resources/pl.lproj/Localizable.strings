@@ -114,6 +114,10 @@
 "settings.updates.frequency_weekly" = "Co tydzień";
 "settings.updates.auto_download" = "Pobieraj i instaluj automatycznie";
 "settings.updates.check_now" = "Sprawdź teraz";
+"settings.updates.channel" = "Kanał";
+"settings.updates.channel_stable" = "Stabilny";
+"settings.updates.channel_beta" = "Beta";
+"settings.updates.channel_footer" = "Beta dostaje nowe funkcje przed wydaniem, a także wydania stabilne. Po powrocie na kanał stabilny beta zostaje do następnego wydania stabilnego.";
 "settings.updates.never_checked" = "Nie sprawdzano";
 "settings.updates.last_checked" = "Sprawdzono %@";
 

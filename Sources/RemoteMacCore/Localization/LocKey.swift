@@ -120,6 +120,10 @@ public enum LocKey: String, CaseIterable, Sendable {
     case settingsFrequencyWeekly = "settings.updates.frequency_weekly"
     case settingsAutoDownload = "settings.updates.auto_download"
     case settingsCheckNow = "settings.updates.check_now"
+    case settingsChannel = "settings.updates.channel"
+    case settingsChannelStable = "settings.updates.channel_stable"
+    case settingsChannelBeta = "settings.updates.channel_beta"
+    case settingsChannelFooter = "settings.updates.channel_footer"
     case settingsNeverChecked = "settings.updates.never_checked"
     /// Takes one argument: a relative time string, e.g. "2 hours ago".
     case settingsLastChecked = "settings.updates.last_checked"
